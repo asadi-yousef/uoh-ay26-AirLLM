@@ -22,7 +22,9 @@ and where the quality red line appears.
 
 - Read quantization mode, bit width, and compute dtype from config.
 - Support 4-bit and 8-bit settings.
-- Use `transformers.BitsAndBytesConfig` when available.
+- Support CPU dynamic-int8 quantization for Windows CPU-only environments.
+- Use `transformers.BitsAndBytesConfig` when configured for `bitsandbytes`.
+- Use `torch.ao.quantization.quantize_dynamic` when configured for `dynamic_int8`.
 - Load tokenizer and model through `AutoTokenizer` and `AutoModelForCausalLM`.
 - Return structured failures when `bitsandbytes`, CUDA, or model support is missing.
 - Include attempted quantization method and bit width in result metadata on success.
@@ -53,13 +55,15 @@ Outputs:
 
 - `uv run airllm-ex05 quantized --config configs/experiment.yaml` writes one result per
   prompt/run.
-- Missing or unsupported `bitsandbytes` produces failed results with clear error messages.
+- Missing or unsupported `bitsandbytes` produces failed results with clear error messages when
+  that mode is selected.
+- CPU dynamic-int8 runs successfully on the validation machine.
 - Successful quantized runs include latency, TPOT, throughput, RAM, VRAM, generated text, and
   quantization metadata.
 
 ## Risks and Failure Modes
 
-- Current observed failure: 4-bit loading requires `bitsandbytes>=0.46.1`.
+- Previous observed failure: 4-bit loading required `bitsandbytes>=0.46.1`.
 - `bitsandbytes` support may be limited on Windows or CPU-only systems.
 - Quantized loading may require CUDA even when baseline CPU loading works.
 - Very aggressive quantization may reduce quality.
@@ -77,5 +81,4 @@ successful fake quantized execution and missing-dependency failure behavior with
 - Reuses baseline `_generate()` for text generation.
 - `_quantization_kwargs()` chooses 4-bit or 8-bit `BitsAndBytesConfig` when available, or a
   dtype fallback if the API is absent.
-- Current real validation run failed before inference for both prompts due to missing
-  `bitsandbytes`.
+- Current real validation run succeeded for both prompts with `torch.dynamic_int8`.

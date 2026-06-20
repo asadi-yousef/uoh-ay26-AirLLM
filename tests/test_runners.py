@@ -48,6 +48,13 @@ class FakeTransformers:
 class FakeTorch:
     float16 = "float16"
     float32 = "float32"
+    qint8 = "qint8"
+
+    class Nn:
+        class Linear:
+            pass
+
+    nn = Nn
 
     class Cuda:
         @staticmethod
@@ -55,6 +62,18 @@ class FakeTorch:
             return False
 
     cuda = Cuda
+
+    class Ao:
+        class Quantization:
+            @staticmethod
+            def quantize_dynamic(model: object, layers: set[object], dtype: str) -> object:
+                assert FakeTorch.nn.Linear in layers
+                assert dtype == FakeTorch.qint8
+                return model
+
+        quantization = Quantization
+
+    ao = Ao
 
 
 class FakeAirLLMModel:
@@ -135,4 +154,5 @@ def test_quantized_success_with_fakes(monkeypatch) -> None:
     results = run_quantized(config)
 
     assert all(result.status == "success" for result in results)
-    assert results[0].metadata["bits"] == 4
+    assert results[0].metadata["bits"] == 8
+    assert results[0].metadata["quantization_method"] == "torch.dynamic_int8"

@@ -10,11 +10,11 @@ measured run should be interpreted as a pipeline validation run, not as the fina
 experiment: the configured model is `sshleifer/tiny-gpt2`, which is intentionally small.
 
 The run produced six raw benchmark records from two prompts and one run per prompt. The
-baseline `transformers` runner succeeded twice. The AirLLM runner failed twice during model
-loading because `optimum.bettertransformer` was missing. The quantized runner failed twice
-during model loading because 4-bit `bitsandbytes` support was unavailable. These failures are
-valid negative results for dependency and platform readiness, but they do not yet demonstrate
-the assignment's intended large-model RAM/VRAM pressure.
+baseline `transformers` runner succeeded twice. The quantized CPU dynamic-int8 runner
+succeeded twice. The AirLLM runner failed twice during model loading because
+`optimum.bettertransformer` was missing. The remaining failure is a valid negative result for
+dependency readiness, but the run still does not demonstrate the assignment's intended
+large-model RAM/VRAM pressure.
 
 ## Source Requirements
 
@@ -84,7 +84,7 @@ The active config in `configs/experiment.yaml` used:
 | Max new tokens | 32 |
 | Baseline mode | `transformers` |
 | AirLLM mode | `airllm` |
-| Quantization mode | `bitsandbytes`, 4-bit |
+| Quantization mode | `dynamic_int8`, 8-bit |
 | Model cache | `model_cache/huggingface` |
 | AirLLM shard cache | `airllm_cache/layer_shards` |
 | Raw outputs | `results/raw` |
@@ -110,13 +110,16 @@ uv run airllm-ex05 report --config configs/experiment.yaml
 | baseline | 1 | success | 20.703 | 0.051292 | 0.001115 | 896.826 | 46 | 389.95 | n/a | n/a |
 | airllm | 0 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | `ModuleNotFoundError: No module named 'optimum.bettertransformer'` |
 | airllm | 1 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | same as above |
-| quantized | 0 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | `ImportError: Using bitsandbytes 4-bit quantization requires bitsandbytes` |
-| quantized | 1 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | same as above |
+| quantized | 0 | success | 4.987 | 0.152255 | 0.003541 | 282.420 | 43 | 366.14 | n/a | n/a |
+| quantized | 1 | success | 4.987 | 0.050894 | 0.001106 | 903.846 | 46 | 366.21 | n/a | n/a |
 
 Baseline average generation latency across the two prompts was about 0.077091 seconds. The
 average of the two reported throughput values was about 657.375 tokens/second, while aggregate
 throughput across both prompts was about 577.25 tokens/second. Peak process RAM stayed near
-389.9 MB. TTFT was not measured because the current runner uses non-streaming generation.
+389.9 MB. Quantized average generation latency was about 0.101574 seconds; its average of
+reported throughput values was about 593.133 tokens/second, while aggregate throughput across
+both quantized prompts was about 438.53 tokens/second. Quantized peak process RAM stayed near
+366.2 MB. TTFT was not measured because the current runner uses non-streaming generation.
 
 ## Baseline Direct Run
 
@@ -160,22 +163,18 @@ until the missing dependency is resolved and a stress model is tested.
 
 ## Quantized Result
 
-The quantized runner failed during load for both prompts:
+The quantized runner now uses CPU `torch.dynamic_int8`, which is a realistic fallback for this
+Windows CPU-only machine. It succeeded for both prompts. Compared with baseline, quantized load
+time dropped from 20.703 seconds to 4.987 seconds and peak RAM dropped from about 389.9 MB to
+about 366.2 MB. Generation was mixed: prompt 0 became slower, 0.152255 seconds versus 0.102889
+seconds, while prompt 1 was effectively equal, 0.050894 seconds versus 0.051292 seconds.
 
-```text
-ImportError: Using `bitsandbytes` 4-bit quantization requires bitsandbytes: `pip install -U bitsandbytes>=0.46.1`
-```
-
-The configured quantization mode is 4-bit `bitsandbytes`. On this Windows CPU-only setup,
-the result is consistent with the known operational risk that common `bitsandbytes`
-quantization paths are easiest on CUDA-enabled Linux environments and may be unavailable on
-Windows or CPU-only machines. No quantized output was generated, so there is no measured
-memory/speed/quality tradeoff yet.
-
-The expected tradeoff remains: quantization reduces weight precision and can reduce memory
-footprint and memory bandwidth demand, especially during Decode. The risk is quality loss,
-particularly with aggressive low-bit settings or unsupported model/backend combinations.
-Because this run failed before loading, the quality red line was not observed.
+The output text was qualitatively the same as baseline: both prompts repeated "factors". For
+this tiny validation model, quantization did not create an observable additional quality loss,
+but the model itself is too weak to make a meaningful quality claim. The useful conclusion is
+engineering-oriented: CPU dynamic int8 provides a functioning quantized path on the observed
+hardware, while the previous `bitsandbytes` 4-bit path was not appropriate for this Windows
+CPU-only environment.
 
 ## Prefill, Decode, TTFT, and TPOT
 
@@ -191,18 +190,20 @@ count. It does not measure TTFT because `model.generate(...)` is called without 
 Therefore:
 
 - TTFT is missing in the current evidence.
-- TPOT is available only for successful baseline runs.
+- TPOT is available for successful baseline and quantized runs.
 - The measured TPOT values, 2.393 ms/token and 1.115 ms/token, are validation-model numbers
-  and should not be generalized to large local LLM serving.
+  for baseline; quantized TPOT values were 3.541 ms/token and 1.106 ms/token. These numbers
+  should not be generalized to large local LLM serving.
 
 For the final stress experiment, a streaming callback or token-level timing hook should be
 added if exact TTFT and inter-token latency are required.
 
 ## Memory-Bound Versus Compute-Bound Analysis
 
-The current run does not show a hardware bottleneck. Peak baseline RAM was about 390 MB, far
-below the machine's 15.70 GiB RAM. There is no detected GPU or VRAM, so no VRAM saturation can
-be analyzed. The successful baseline generation was fast because the model is too small.
+The current run does not show a hardware bottleneck. Peak baseline RAM was about 390 MB and
+peak quantized RAM was about 366 MB, both far below the machine's 15.70 GiB RAM. There is no
+detected GPU or VRAM, so no VRAM saturation can be analyzed. The successful baseline and
+quantized generations were fast because the model is too small.
 
 For the intended final experiment, the diagnostic logic should be:
 
@@ -235,18 +236,18 @@ called out as a limitation, not hidden.
 
 Generated figures exist under `results/figures/`:
 
-- `latency.png`: bar chart for successful baseline latency only.
-- `throughput.png`: bar chart for successful baseline throughput only.
-- `memory.png`: bar chart for successful baseline peak RAM only.
+- `latency.png`: bar chart for successful baseline and quantized latency.
+- `throughput.png`: bar chart for successful baseline and quantized throughput.
+- `memory.png`: bar chart for successful baseline and quantized peak RAM.
 - `cost_curve.png`: API versus on-premises monthly cost curve from configured assumptions.
 
-Because AirLLM and quantized runs failed before inference, the metric plots contain only
-baseline bars. The cost plot is still useful because it is computed from the benchmark-derived
-average request shape and configured cost assumptions.
+Because AirLLM failed before inference, the metric plots contain baseline and quantized bars
+only. The cost plot is still useful because it is computed from the benchmark-derived average
+request shape and configured cost assumptions.
 
 Generated tabular outputs exist under `results/processed/`:
 
-- `analysis.json`: 6 results, 2 successes, 4 failures, no break-even point in configured
+- `analysis.json`: 6 results, 4 successes, 2 failures, no break-even point in configured
   request volumes.
 - `comparison_table.csv`: flattened benchmark table with all successes and failures.
 
@@ -272,10 +273,10 @@ The processed cost curve reports:
 
 | Monthly requests | API cost USD | Local cost USD | API/request USD | Local/request USD |
 | ---: | ---: | ---: | ---: | ---: |
-| 100 | 0.002775 | 43.333410 | 0.00002775 | 0.43333410 |
-| 1,000 | 0.027750 | 43.334104 | 0.00002775 | 0.04333410 |
-| 10,000 | 0.277500 | 43.341042 | 0.00002775 | 0.00433410 |
-| 100,000 | 2.775000 | 43.410424 | 0.00002775 | 0.00043410 |
+| 100 | 0.002775 | 43.333423 | 0.00002775 | 0.43333423 |
+| 1,000 | 0.027750 | 43.334227 | 0.00002775 | 0.04333423 |
+| 10,000 | 0.277500 | 43.342267 | 0.00002775 | 0.00433423 |
+| 100,000 | 2.775000 | 43.422666 | 0.00002775 | 0.00043423 |
 
 No break-even request volume appears in the configured range. This is unsurprising: the
 validation model uses tiny prompts and tiny outputs, so API token costs stay extremely low,
@@ -295,16 +296,16 @@ Current limitations:
 - No GPU or CUDA device was detected, so no VRAM behavior was measured.
 - TTFT is not measured because generation is not streamed.
 - AirLLM failed before inference because `optimum.bettertransformer` was missing.
-- Quantized inference failed before inference because `bitsandbytes` was unavailable.
-- Output quality comparison is limited to baseline tiny-gpt2 samples; AirLLM and quantized
-  outputs do not exist.
+- Output quality comparison is limited to tiny-gpt2 samples; baseline and quantized outputs
+  are nearly identical and poor, while AirLLM outputs do not exist.
 - The cost model is deterministic and useful for comparison, but it uses configured
   assumptions rather than measured wall-power data.
 
 Negative results:
 
 - AirLLM path: failed at load stage for both prompts.
-- Quantized path: failed at load stage for both prompts.
+- Previous quantized `bitsandbytes` path: failed at load stage for both prompts.
+- Current quantized `torch.dynamic_int8` path: succeeded for both prompts.
 - Baseline did not fail, but it also did not demonstrate the intended large-model bottleneck.
 
 ## Engineering Conclusions
@@ -319,10 +320,9 @@ The experiment itself is not yet final-submission complete. It proves the code p
 the assignment's central hardware stress claim. Before final manual submission, the project
 needs one more real experiment pass with a model selected to stress this CPU-only, 15.70 GiB
 RAM machine, plus either a working AirLLM dependency set or a clearly documented reason why
-AirLLM cannot run on the target environment. Quantized inference also needs either a supported
-backend or a documented platform limitation.
+AirLLM cannot run on the target environment.
 
 The most defensible final conclusion from current evidence is narrow: the repository is a
-reproducible measurement framework, the baseline validation run works, and the AirLLM and
-quantized paths expose concrete dependency/platform blockers. The larger performance,
-paging, and quantization claims still require a final stress-model run.
+reproducible measurement framework, the baseline validation run works, CPU dynamic-int8
+quantization works on this machine, and the AirLLM path exposes a concrete dependency blocker.
+The larger performance, paging, and quantization claims still require a final stress-model run.

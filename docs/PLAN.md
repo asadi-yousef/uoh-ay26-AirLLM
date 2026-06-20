@@ -43,7 +43,7 @@ The project is a small Python package with a CLI front end and separated infrast
 | `runners/common.py` | Shared prompt iteration, success measurement, and structured failures |
 | `runners/baseline_runner.py` | Direct `transformers` causal-LM load and generation |
 | `runners/airllm_runner.py` | Lazy AirLLM import, layer-shard path use, AirLLM generation |
-| `runners/quantized_runner.py` | Lazy `transformers`/torch import and 4-bit/8-bit loading attempt |
+| `runners/quantized_runner.py` | Lazy `transformers`/torch import, CPU dynamic-int8 quantization, and optional 4-bit/8-bit loading |
 | `cost_analysis.py` | API/local cost estimates and break-even scan |
 | `plotting.py` | Matplotlib bar charts and cost curve |
 | `report.py` | Processed analysis and generated report body |
@@ -77,8 +77,8 @@ uv run pytest
 ```
 
 The current run used `sshleifer/tiny-gpt2`, two prompts, one run each, and 32 max new tokens.
-Baseline succeeded; AirLLM and quantized modes failed during load due to dependency/platform
-issues.
+Baseline and CPU dynamic-int8 quantized modes succeeded. AirLLM failed during load due to the
+missing `optimum.bettertransformer` dependency.
 
 ## Result File Structure
 
@@ -117,6 +117,8 @@ Generated result files are ignored by Git. Important evidence is summarized in
 - Store raw generated evidence locally but ignore it in Git.
 - Use simple token counting for dependency-light metrics; exact tokenizer counts can be added
   later.
+- Use CPU dynamic-int8 quantization as the default on this Windows CPU-only machine, while
+  preserving the `bitsandbytes` path for CUDA environments.
 - Use non-streaming generation for portability; exact TTFT requires a future streaming hook.
 
 ## Mapping to Assignment Requirements
@@ -127,9 +129,9 @@ Generated result files are ignored by Git. Important evidence is summarized in
 | Model choice and justification | Config and report | Current model is validation-only |
 | Baseline run | `baseline_runner.py` | Succeeded twice |
 | AirLLM run | `airllm_runner.py` | Failed at load due to missing dependency |
-| Quantization run | `quantized_runner.py` | Failed at load due to missing `bitsandbytes` |
+| Quantization run | `quantized_runner.py` | Succeeded with CPU dynamic int8 |
 | TTFT/TPOT/throughput/latency | Metrics schema and derived TPOT/throughput | TPOT/throughput present for baseline; TTFT missing |
-| RAM/VRAM | RAM sampler and CUDA peak helper | RAM present for baseline; no VRAM detected |
+| RAM/VRAM | RAM sampler and CUDA peak helper | RAM present for baseline and quantized; no VRAM detected |
 | Plots/tables | `plotting.py`, `report.py` | Generated from current evidence |
 | Economic analysis | `cost_analysis.py` | No break-even in configured volumes |
 | Negative results | Structured failures | AirLLM and quantized failures preserved |

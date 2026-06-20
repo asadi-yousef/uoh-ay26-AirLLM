@@ -56,6 +56,18 @@ def _load_quantized(
         cache_dir=str(config.model.cache_dir),
         trust_remote_code=config.model.trust_remote_code,
     )
+    if config.quantization.mode == "dynamic_int8":
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            config.model.name,
+            cache_dir=str(config.model.cache_dir),
+            trust_remote_code=config.model.trust_remote_code,
+            torch_dtype=torch.float32,
+        )
+        model.eval()
+        quantize_dynamic = torch.ao.quantization.quantize_dynamic
+        model = quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+        return model, tokenizer, time.perf_counter() - started, "torch.dynamic_int8"
+
     kwargs = _quantization_kwargs(config, transformers, torch)
     model = transformers.AutoModelForCausalLM.from_pretrained(
         config.model.name,

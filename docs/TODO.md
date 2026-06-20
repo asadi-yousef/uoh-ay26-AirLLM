@@ -9,6 +9,7 @@
 - [x] Implement hardware collection.
 - [x] Implement benchmark result schemas and JSON/CSV serialization.
 - [x] Implement baseline, AirLLM, and quantized runners with structured failure handling.
+- [x] Add CPU dynamic-int8 quantization support for Windows CPU-only validation.
 - [x] Implement CLI commands for hardware, runners, analysis, and report generation.
 - [x] Implement cost model and plot generation.
 - [x] Add tests that avoid model downloads and cover the core infrastructure.
@@ -21,7 +22,8 @@
       15.70 GiB RAM, no CUDA-visible GPU/VRAM.
 - [x] Baseline succeeded for both validation prompts.
 - [x] AirLLM failed during load because `optimum.bettertransformer` was missing.
-- [x] Quantized 4-bit path failed during load because `bitsandbytes` was unavailable.
+- [x] Previous quantized 4-bit path failed during load because `bitsandbytes` was unavailable.
+- [x] Current quantized CPU dynamic-int8 path succeeded for both validation prompts.
 - [x] Analysis JSON, comparison CSV, and four plots were generated locally and remain ignored.
 
 ## Still Needed For Final Course Submission
@@ -30,7 +32,7 @@
       being realistic for a bounded local experiment.
 - [ ] Rerun baseline, AirLLM, and quantized modes with the final stress model.
 - [ ] Resolve or document the AirLLM dependency issue for the final environment.
-- [ ] Resolve or document the quantization backend issue on Windows/CPU-only hardware.
+- [x] Resolve the quantization backend issue for validation by using CPU dynamic int8.
 - [ ] Add exact TTFT measurement if the final report needs token-stream timing instead of
       derived TPOT only.
 - [ ] Review generated samples manually for output quality and document any quantization

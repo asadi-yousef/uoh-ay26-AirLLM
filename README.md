@@ -84,13 +84,16 @@ two prompts, one run per prompt, and `max_new_tokens: 32`.
   390 MB.
 - AirLLM: failed during load for both prompts with
   `ModuleNotFoundError: No module named 'optimum.bettertransformer'`.
-- Quantized: failed during 4-bit load for both prompts because `bitsandbytes` was unavailable.
-- Analysis: 6 raw results, 2 successes, 4 failures, generated comparison tables and four plots.
+- Quantized: succeeded for both prompts with CPU `torch.dynamic_int8`; load time was 4.987
+  seconds, generation latency was 0.152255 seconds and 0.050894 seconds, and peak process RAM
+  was about 366 MB.
+- Analysis: 6 raw results, 4 successes, 2 failures, generated comparison tables and four plots.
   No local/API break-even appears in the configured request volumes.
 
 This is not yet the final stress-model experiment requested by Exercise 05. It verifies the
-software pipeline and documents dependency/platform blockers. The final submission should rerun
-the same workflow with a larger model selected for the local hardware.
+software pipeline, documents the remaining AirLLM dependency blocker, and confirms a CPU
+quantization path for this machine. The final submission should rerun the same workflow with a
+larger model selected for the local hardware.
 
 ## Quality Commands
 
