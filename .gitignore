@@ -1,26 +1,51 @@
 # Course PDFs / private assignment documents
 documents/*.pdf
 
-# Python
+# Python environments and caches
 .venv/
+venv/
+env/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .coverage
+coverage.xml
 htmlcov/
 
-# Large generated outputs
-results/
+# Secrets and local machine config
+.env
+.env.*
+!.env.example
+
+# Model weights, shards, and caches
 models/
+model_cache/
 checkpoints/
+airllm_cache/
 .cache/
 *.safetensors
 *.bin
 *.gguf
 *.pt
 *.pth
+*.onnx
+*.ckpt
 
-# Environment / secrets
-.env
-.env.*
+# Generated experiment outputs
+results/raw/*.json
+results/raw/*.csv
+results/processed/*.json
+results/processed/*.csv
+results/figures/*.png
+results/figures/*.svg
+!results/raw/.gitkeep
+!results/processed/.gitkeep
+!results/figures/.gitkeep
+
+# Local editor and OS files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
