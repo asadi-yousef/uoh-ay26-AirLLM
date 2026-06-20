@@ -37,13 +37,17 @@ def run_airllm(config: ExperimentConfig) -> list[BenchmarkResult]:
                 )
             )
         except Exception as exc:
-            results.append(failed_result(config, RUNNER_AIRLLM, prompt, prompt_index, run_index, exc))
+            results.append(
+                failed_result(config, RUNNER_AIRLLM, prompt, prompt_index, run_index, exc)
+            )
     return results
 
 
 def _load_airllm_model(config: ExperimentConfig, airllm: Any) -> tuple[Any, float]:
     started = time.perf_counter()
-    model_class = getattr(airllm, "AutoModel", None) or getattr(airllm, "AirLLMLlama2", None)
+    model_class = getattr(airllm, "AutoModel", None) or getattr(
+        airllm, "AirLLMLlama2", None
+    )
     if model_class is None:
         msg = "Installed airllm package does not expose AutoModel or AirLLMLlama2."
         raise RuntimeError(msg)

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from airllm_ex05 import constants
 from airllm_ex05.benchmark import load_results
-from airllm_ex05.metrics import MemorySampler, current_process_ram_mb, cuda_peak_memory_mb
+from airllm_ex05.metrics import MemorySampler, cuda_peak_memory_mb, current_process_ram_mb
 from airllm_ex05.shared.logging_utils import configure_logging
 
 

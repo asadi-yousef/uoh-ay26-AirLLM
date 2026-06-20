@@ -3,7 +3,6 @@
 import argparse
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
 
 from airllm_ex05.benchmark import save_result, save_results_csv
 from airllm_ex05.config import load_config
@@ -14,7 +13,6 @@ from airllm_ex05.runners.airllm_runner import run_airllm
 from airllm_ex05.runners.baseline_runner import run_baseline
 from airllm_ex05.runners.quantized_runner import run_quantized
 from airllm_ex05.shared.logging_utils import configure_logging
-
 
 Runner = Callable[..., list[BenchmarkResult]]
 
@@ -41,7 +39,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _add_config_command(
-    subparsers: Any,
+    subparsers: object,
     name: str,
     handler: Callable[[argparse.Namespace], int],
 ) -> None:
@@ -77,7 +75,10 @@ def _run_and_save(config_path: str | Path, runner: Runner, label: str) -> int:
     csv_path = config.outputs.raw_dir / f"{label}_results.csv"
     save_results_csv(results, csv_path)
     successes = sum(result.status == "success" for result in results)
-    print(f"Saved {len(results)} {label} results ({successes} successful) to {config.outputs.raw_dir}")
+    print(
+        f"Saved {len(results)} {label} results "
+        f"({successes} successful) to {config.outputs.raw_dir}"
+    )
     return 0
 
 

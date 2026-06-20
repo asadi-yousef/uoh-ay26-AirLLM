@@ -49,7 +49,11 @@ def _cpu_model() -> str:
         ).stdout
     except (OSError, subprocess.SubprocessError):
         return platform.machine() or "unknown"
-    lines = [line.strip() for line in output.splitlines() if line.strip() and line.strip() != "Name"]
+    lines = [
+        line.strip()
+        for line in output.splitlines()
+        if line.strip() and line.strip() != "Name"
+    ]
     return lines[0] if lines else platform.machine() or "unknown"
 
 

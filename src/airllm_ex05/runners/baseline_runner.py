@@ -40,7 +40,9 @@ def run_baseline(config: ExperimentConfig) -> list[BenchmarkResult]:
                 )
             )
         except Exception as exc:
-            results.append(failed_result(config, RUNNER_BASELINE, prompt, prompt_index, run_index, exc))
+            results.append(
+                failed_result(config, RUNNER_BASELINE, prompt, prompt_index, run_index, exc)
+            )
     return results
 
 

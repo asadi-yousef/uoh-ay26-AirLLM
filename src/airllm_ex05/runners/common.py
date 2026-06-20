@@ -1,7 +1,7 @@
 """Shared runner helpers."""
 
-from collections.abc import Callable
 import time
+from collections.abc import Callable
 
 from airllm_ex05.config import ExperimentConfig
 from airllm_ex05.metrics import (

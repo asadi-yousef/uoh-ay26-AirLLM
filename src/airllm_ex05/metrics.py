@@ -1,9 +1,9 @@
 """Metric calculation and memory sampling helpers."""
 
-from collections.abc import Callable
-from dataclasses import dataclass
 import threading
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import psutil
 

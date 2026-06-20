@@ -49,10 +49,12 @@ class FakeTorch:
     float16 = "float16"
     float32 = "float32"
 
-    class cuda:
+    class Cuda:
         @staticmethod
         def is_available() -> bool:
             return False
+
+    cuda = Cuda
 
 
 class FakeAirLLMModel:

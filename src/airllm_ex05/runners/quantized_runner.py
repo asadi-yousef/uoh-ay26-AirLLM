@@ -41,11 +41,15 @@ def run_quantized(config: ExperimentConfig) -> list[BenchmarkResult]:
                 )
             )
         except Exception as exc:
-            results.append(failed_result(config, RUNNER_QUANTIZED, prompt, prompt_index, run_index, exc))
+            results.append(
+                failed_result(config, RUNNER_QUANTIZED, prompt, prompt_index, run_index, exc)
+            )
     return results
 
 
-def _load_quantized(config: ExperimentConfig, transformers: Any, torch: Any) -> tuple[Any, Any, float, str]:
+def _load_quantized(
+    config: ExperimentConfig, transformers: Any, torch: Any
+) -> tuple[Any, Any, float, str]:
     started = time.perf_counter()
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         config.model.name,
@@ -66,7 +70,9 @@ def _load_quantized(config: ExperimentConfig, transformers: Any, torch: Any) -> 
 
 def _quantization_kwargs(config: ExperimentConfig, transformers: Any, torch: Any) -> dict[str, Any]:
     if not hasattr(transformers, "BitsAndBytesConfig"):
-        return {"torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32}
+        return {
+            "torch_dtype": torch.float16 if torch.cuda.is_available() else torch.float32
+        }
     if config.quantization.bits == 4:
         return {"quantization_config": transformers.BitsAndBytesConfig(load_in_4bit=True)}
     return {"quantization_config": transformers.BitsAndBytesConfig(load_in_8bit=True)}

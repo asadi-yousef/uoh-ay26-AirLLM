@@ -8,10 +8,12 @@
 
 ## In Progress
 
-- [ ] Implement config and shared utilities.
-- [ ] Implement hardware and metric infrastructure.
-- [ ] Implement runners with graceful failure handling.
-- [ ] Implement CLI, analysis, plots, and report generation.
+- [x] Implement config and shared utilities.
+- [x] Implement hardware and metric infrastructure.
+- [x] Implement runners with graceful failure handling.
+- [x] Implement CLI, analysis, plots, and report generation.
+- [ ] Run real model experiments on the target machine.
+- [ ] Update final report with measured numbers and qualitative output review.
 
 ## Manual Experiment Work
 
