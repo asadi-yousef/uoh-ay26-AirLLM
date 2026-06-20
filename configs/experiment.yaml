@@ -1,0 +1,50 @@
+# Default experiment for Exercise 05.
+# The model is intentionally configurable. Start with this small public model to
+# verify the pipeline, then replace it with a larger stress model justified by
+# your hardware, such as a 7B+ instruct model.
+model:
+  name: "sshleifer/tiny-gpt2"
+  cache_dir: "model_cache/huggingface"
+  trust_remote_code: false
+  device: "auto"
+
+benchmark:
+  prompts:
+    - "Explain the difference between prefill and decode in local LLM inference."
+    - "Summarize why paging can help run a model that does not fit in VRAM."
+  max_new_tokens: 32
+  runs: 1
+  warmup_runs: 0
+  timeout_seconds: 900
+
+outputs:
+  raw_dir: "results/raw"
+  processed_dir: "results/processed"
+  figures_dir: "results/figures"
+  report_path: "docs/REPORT.md"
+
+baseline:
+  enabled: true
+  mode: "transformers"
+
+airllm:
+  enabled: true
+  mode: "airllm"
+  layer_shards_saving_path: "airllm_cache/layer_shards"
+
+quantization:
+  enabled: true
+  mode: "bitsandbytes"
+  bits: 4
+  compute_dtype: "float16"
+
+cost:
+  api_input_price_per_1m_tokens_usd: 0.15
+  api_output_price_per_1m_tokens_usd: 0.60
+  cached_input_discount: 0.5
+  hardware_cost_usd: 1200.0
+  hardware_lifetime_months: 36
+  electricity_usd_per_kwh: 0.20
+  average_power_watts: 180.0
+  maintenance_monthly_usd: 10.0
+  monthly_request_volumes: [100, 1000, 10000, 100000]
