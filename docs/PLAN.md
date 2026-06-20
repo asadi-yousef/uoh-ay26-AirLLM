@@ -95,8 +95,9 @@ tokens. Baseline and CPU dynamic-int8 quantized modes succeeded. AirLLM successf
 - `results/figures/memory.png`: peak RAM bars where values exist.
 - `results/figures/cost_curve.png`: API versus local monthly cost.
 
-Generated result files are ignored by Git. Important evidence is summarized in
-`docs/REPORT.md`.
+Raw per-run files, model caches, and AirLLM shards are ignored by Git. The final figures and
+`results/processed/comparison_table.csv` are committed because the assignment asks for visual
+and tabular evidence in the GitHub README.
 
 ## Implementation Phases
 
@@ -115,7 +116,8 @@ Generated result files are ignored by Git. Important evidence is summarized in
   CPU-only machine and has the sharded SafeTensors index required by AirLLM.
 - Use structured failed results instead of allowing runner exceptions to abort the experiment.
 - Lazy-import heavy dependencies so tests and docs can run without model packages.
-- Store raw generated evidence locally but ignore it in Git.
+- Store raw generated evidence locally but ignore it in Git; commit only small final figures
+  and the processed comparison table.
 - Use simple token counting for dependency-light metrics; exact tokenizer counts can be added
   later.
 - Use CPU dynamic-int8 quantization as the default on this Windows CPU-only machine, while

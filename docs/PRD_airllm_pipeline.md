@@ -33,7 +33,8 @@ resource-allocation change. The report must connect AirLLM behavior to paging, v
 - AirLLM absence or incompatibility must not crash the whole CLI.
 - The runner must be testable with fake modules.
 - AirLLM caches and shards must remain ignored by Git.
-- The report must clearly distinguish dependency failure from measured AirLLM performance.
+- The report must clearly distinguish dependency failure, shard-creation success, and measured
+  AirLLM generation performance.
 
 ## Inputs and Outputs
 
@@ -54,8 +55,8 @@ Outputs:
 
 - `uv run airllm-ex05 airllm --config configs/experiment.yaml` writes one result per
   prompt/run.
-- Missing `airllm` or missing transitive dependencies are saved as failed results with
-  `metadata.stage = "load"`.
+- Missing `airllm`, missing transitive dependencies, or internal AirLLM load failures are saved
+  as failed results with `metadata.stage = "load"`.
 - Successful runs include generated text, latency, derived TPOT, throughput, peak RAM, and
   peak VRAM when CUDA exists.
 

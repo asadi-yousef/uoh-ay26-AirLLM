@@ -58,8 +58,8 @@ Outputs:
 - Missing or unsupported `bitsandbytes` produces failed results with clear error messages when
   that mode is selected.
 - CPU dynamic-int8 runs successfully on the final Qwen2.5-3B experiment.
-- Successful quantized runs include latency, TPOT, throughput, RAM, VRAM, generated text, and
-  quantization metadata.
+- Successful quantized runs include latency, TTFT, TPOT, throughput, RAM, VRAM when available,
+  generated text, and quantization metadata.
 
 ## Risks and Failure Modes
 

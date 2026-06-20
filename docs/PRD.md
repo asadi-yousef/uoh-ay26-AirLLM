@@ -29,7 +29,9 @@ remaining bounded enough for a short local run.
 - Save one JSON result per prompt/run and one CSV summary per runner.
 - Capture load-stage and generation-stage failures without crashing the whole benchmark.
 - Generate a processed comparison table, analysis JSON, metric plots, cost plot, and report.
-- Keep generated results, models, caches, private PDFs, and secrets out of Git.
+- Keep raw run JSON/CSV files, models, caches, private PDFs, and secrets out of Git.
+- Commit the small final figures and comparison table because the assignment requires visual
+  and tabular evidence in the README.
 
 ## Non-Functional Requirements
 
@@ -55,9 +57,9 @@ Outputs:
 - `results/raw/hardware.json`
 - `results/raw/*_p*_r*.json`
 - `results/raw/*_results.csv`
-- `results/processed/analysis.json`
-- `results/processed/comparison_table.csv`
-- `results/figures/*.png`
+- `results/processed/analysis.json` as ignored local analysis metadata
+- `results/processed/comparison_table.csv` as committed final comparison evidence
+- `results/figures/*.png` as committed final visual evidence
 - `docs/REPORT.md`
 
 ## Acceptance Criteria
@@ -77,12 +79,12 @@ Outputs:
 
 ## Risks and Failure Modes
 
-- Final model may be too small to satisfy the assignment's stress requirement.
+- A future model change may be too small to satisfy the assignment's stress requirement.
 - Large model download or AirLLM shard creation may require substantial disk space.
 - CPU-only Windows may not support common 4-bit `bitsandbytes` paths.
 - AirLLM may be incompatible with current package versions or model architecture.
 - Python 3.13 may be newer than some ML packages support.
-- Non-streaming generation leaves TTFT unmeasured.
+- AirLLM may shard successfully but still fail before generation, as observed on Qwen2.5-3B.
 
 ## Testing Strategy
 

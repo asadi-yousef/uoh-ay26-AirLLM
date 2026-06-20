@@ -43,13 +43,18 @@
       quality red line.
 - [x] Decide whether the README itself must embed the final plots for the evaluator, or whether
       linking to `docs/REPORT.md` is acceptable.
-- [ ] Do a final human read-through of `docs/REPORT.md` after the stress-model run.
+- [x] Commit final plots and the processed comparison table required for visual evidence.
+- [x] Keep raw result JSON/CSV files, model cache, AirLLM shards, and private PDFs ignored.
+- [x] Run Ruff and pytest after final code/docs changes.
+- [ ] Do a final human read-through of `README.md` and `docs/REPORT.md` before submission.
 
 ## Manual Review Checklist
 
 - [ ] Confirm private PDFs remain ignored and unstaged.
 - [ ] Confirm model caches, AirLLM shards, virtual environments, and generated heavy outputs
       remain unstaged.
-- [ ] Confirm final report numbers match ignored raw JSON/CSV files.
+- [ ] Confirm final report numbers match ignored raw JSON/CSV files and committed
+      `comparison_table.csv`.
 - [ ] Confirm all stated failures are real and not inferred.
 - [ ] Confirm Ruff and pytest pass on the final committed state.
+- [ ] Confirm the GitHub renderer displays the four README plots correctly.

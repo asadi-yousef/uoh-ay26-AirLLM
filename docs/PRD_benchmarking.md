@@ -37,7 +37,8 @@ compute-bound versus memory-bound execution, AirLLM paging, quantization, and lo
 - JSON output must remain stable and human-inspectable.
 - CSV output must be spreadsheet-friendly.
 - Missing optional dependencies must become data, not process crashes.
-- Generated outputs must remain ignored by Git.
+- Raw generated outputs must remain ignored by Git; final small plots and the comparison table
+  may be committed for submission evidence.
 
 ## Inputs and Outputs
 
@@ -65,7 +66,8 @@ Outputs:
 
 ## Risks and Failure Modes
 
-- TTFT is currently not measured because generation is non-streaming.
+- TTFT is measured for Transformers baseline and quantized runs through streaming generation;
+  AirLLM TTFT remains unavailable when AirLLM fails before generation.
 - Simple whitespace token counts differ from tokenizer-true counts.
 - RAM sampling interval may miss short-lived peaks.
 - CUDA memory reports are unavailable on CPU-only machines.
