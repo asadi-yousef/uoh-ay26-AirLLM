@@ -72,6 +72,26 @@ Hugging Face login flow.
 - `results/figures/*.png`: latency, throughput, memory, and cost plots.
 - `docs/REPORT.md`: generated Markdown report.
 
+## Current Validation Run
+
+The current ignored result files document a pipeline validation run with `sshleifer/tiny-gpt2`,
+two prompts, one run per prompt, and `max_new_tokens: 32`.
+
+- Hardware: Windows 11, Intel CPU, 4 physical cores, 8 logical cores, 15.70 GiB RAM, no
+  CUDA-visible GPU or VRAM.
+- Baseline: succeeded for both prompts through `transformers`; load time was 20.703 seconds,
+  generation latency was 0.102889 seconds and 0.051292 seconds, and peak process RAM was about
+  390 MB.
+- AirLLM: failed during load for both prompts with
+  `ModuleNotFoundError: No module named 'optimum.bettertransformer'`.
+- Quantized: failed during 4-bit load for both prompts because `bitsandbytes` was unavailable.
+- Analysis: 6 raw results, 2 successes, 4 failures, generated comparison tables and four plots.
+  No local/API break-even appears in the configured request volumes.
+
+This is not yet the final stress-model experiment requested by Exercise 05. It verifies the
+software pipeline and documents dependency/platform blockers. The final submission should rerun
+the same workflow with a larger model selected for the local hardware.
+
 ## Quality Commands
 
 ```bash

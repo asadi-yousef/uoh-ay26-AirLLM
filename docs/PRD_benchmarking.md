@@ -1,27 +1,88 @@
 # Benchmarking PRD
 
-## Objective
+## Purpose
 
-Provide a repeatable benchmark harness that records both successful inference and failed attempts. The assignment explicitly values analyzed negative results, so failures must contain enough context to explain the bottleneck.
+Define the benchmark harness, data model, metrics, and serialization strategy for comparing
+baseline, AirLLM, and quantized local inference attempts.
 
-## Required Metrics
+## Context
 
-- Model loading time.
-- Total latency.
-- Time to first token when observable.
-- Time per output token.
-- Tokens per second.
-- Output token count and approximate input token count.
-- Peak RAM and peak VRAM where practical.
-- Success or failure status.
-- Generated text sample or error message.
+The assignment requires measured evidence rather than informal observations. It also accepts
+negative results when they are captured and analyzed. Therefore the benchmark system must save
+both successful generation and failures with enough context to explain dependency,
+compatibility, memory, or hardware bottlenecks.
 
-## Design
+## Relation to Exercise 05
 
-Each runner returns a common `BenchmarkResult` object. Serialization writes JSON for fidelity and CSV for tables. A memory sampler records process RSS and CUDA memory when available. If streaming token callbacks are unavailable, TTFT remains `null` and TPOT is derived from total latency and output tokens.
+Exercise 05 requires latency, throughput, TTFT, TPOT/ITL, peak RAM, peak VRAM, load time, and
+qualitative outputs. These metrics support the conceptual analysis of Prefill versus Decode,
+compute-bound versus memory-bound execution, AirLLM paging, quantization, and local/API cost.
+
+## Functional Requirements
+
+- Iterate all prompts and run indices consistently across runners.
+- Measure model load time where loading succeeds.
+- Measure total generation latency.
+- Derive output token count, TPOT, and tokens per second.
+- Approximate input token count without requiring tokenizer dependencies.
+- Sample process RSS during generation.
+- Record CUDA peak allocated memory when torch/CUDA are available.
+- Save generated text samples, capped to a manageable length.
+- Save error type, message, runner, model, prompt index, and run index for failures.
+- Write per-result JSON and per-runner CSV.
+
+## Non-Functional Requirements
+
+- Tests must run without network and without model downloads.
+- JSON output must remain stable and human-inspectable.
+- CSV output must be spreadsheet-friendly.
+- Missing optional dependencies must become data, not process crashes.
+- Generated outputs must remain ignored by Git.
+
+## Inputs and Outputs
+
+Inputs:
+
+- `ExperimentConfig`
+- Prompt list
+- Runner-specific generation callable
+- Optional torch/CUDA availability
+
+Outputs:
+
+- `BenchmarkResult`
+- `MetricSummary`
+- Raw JSON files in `results/raw/`
+- CSV summaries in `results/raw/` and `results/processed/`
 
 ## Acceptance Criteria
 
-- Same prompt list and run count are used across modes.
-- Missing GPU/CUDA is recorded, not treated as a project failure.
-- Exceptions are caught per experiment and saved with runner name, model name, prompt index, and hardware snapshot path.
+- Every configured prompt/run produces exactly one result per invoked runner.
+- Failed loads produce failed results for every prompt/run.
+- Successful runs include latency and token-derived metrics.
+- `load_results()` ignores `hardware.json` and loads only benchmark result files.
+- Analysis can process mixed success and failure results.
+
+## Risks and Failure Modes
+
+- TTFT is currently not measured because generation is non-streaming.
+- Simple whitespace token counts differ from tokenizer-true counts.
+- RAM sampling interval may miss short-lived peaks.
+- CUDA memory reports are unavailable on CPU-only machines.
+- Very slow model generation may exceed practical experiment time even if no code timeout is
+  enforced in the runner.
+
+## Testing Strategy
+
+Tests cover metric math, JSON/CSV round trips, empty result directories, CLI smoke behavior,
+fake runner success paths, and fake/missing dependency failure paths.
+
+## Implementation Notes Connected to Code
+
+- `models.py` defines `MetricSummary` and `BenchmarkResult`.
+- `benchmark.py` implements `save_result`, `load_results`, and `save_results_csv`.
+- `metrics.py` implements simple token counting, TPOT, throughput, RAM sampling, and CUDA peak
+  memory.
+- `runners/common.py` implements `iter_prompts`, `run_prompt`, and `failed_result`.
+- Current validation evidence includes two successful baseline results and four load-stage
+  failures.

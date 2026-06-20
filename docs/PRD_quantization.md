@@ -1,22 +1,81 @@
 # Quantization PRD
 
-## Objective
+## Purpose
 
-Measure whether lower-precision loading reduces memory pressure enough to improve local inference, while documenting quality and compatibility tradeoffs.
+Attempt lower-precision model loading and inference so the project can compare memory,
+latency, throughput, and output quality against direct baseline and AirLLM execution.
 
-## Lecture Concepts Used
+## Context
 
-Quantization reduces the number of bits used to represent weights. Lower precision can reduce RAM/VRAM and bandwidth requirements, especially during Decode, but aggressive quantization can degrade output quality. QLoRA and NF4 show why 4-bit formats can be useful, although this project focuses on inference.
+The lecture describes quantization as reducing the number of bits used to represent model
+weights. This can reduce RAM/VRAM footprint and memory bandwidth demand, especially during
+Decode. The tradeoff is that lower precision can reduce output quality, and backend support
+is platform-dependent.
+
+## Relation to Exercise 05
+
+Exercise 05 requires adding quantization to the local inference pipeline and analyzing how it
+changes memory, speed, and output quality. The report must identify whether quantization helps
+and where the quality red line appears.
 
 ## Functional Requirements
 
-- Support configurable quantization mode: `8bit`, `4bit`, or fallback dtype loading.
-- Use `transformers` quantization APIs when available.
-- Treat `bitsandbytes` as optional, especially because Windows support may be limited.
-- Save the attempted quantization method and failure details.
+- Read quantization mode, bit width, and compute dtype from config.
+- Support 4-bit and 8-bit settings.
+- Use `transformers.BitsAndBytesConfig` when available.
+- Load tokenizer and model through `AutoTokenizer` and `AutoModelForCausalLM`.
+- Return structured failures when `bitsandbytes`, CUDA, or model support is missing.
+- Include attempted quantization method and bit width in result metadata on success.
+
+## Non-Functional Requirements
+
+- Tests must not import or require `bitsandbytes`.
+- Quantization failure must not abort the whole benchmark.
+- Windows and CPU-only limitations must be documented explicitly.
+- The report must not claim memory/speed/quality improvements unless result files show them.
+
+## Inputs and Outputs
+
+Inputs:
+
+- `ExperimentConfig.model`
+- `ExperimentConfig.quantization`
+- Prompt list and benchmark settings
+- Installed `transformers`, torch, and optional `bitsandbytes`
+
+Outputs:
+
+- `results/raw/quantized_p*_r*.json`
+- `results/raw/quantized_results.csv`
+- Processed comparison rows and plots when metrics exist
 
 ## Acceptance Criteria
 
-- Tests do not import or require `bitsandbytes`.
-- Quantized failures are saved with method, model, prompt, and error message.
-- Analysis compares quantized memory, speed, and output sample with baseline and AirLLM when data exists.
+- `uv run airllm-ex05 quantized --config configs/experiment.yaml` writes one result per
+  prompt/run.
+- Missing or unsupported `bitsandbytes` produces failed results with clear error messages.
+- Successful quantized runs include latency, TPOT, throughput, RAM, VRAM, generated text, and
+  quantization metadata.
+
+## Risks and Failure Modes
+
+- Current observed failure: 4-bit loading requires `bitsandbytes>=0.46.1`.
+- `bitsandbytes` support may be limited on Windows or CPU-only systems.
+- Quantized loading may require CUDA even when baseline CPU loading works.
+- Very aggressive quantization may reduce quality.
+- Some model architectures may be incompatible with a chosen quantization path.
+
+## Testing Strategy
+
+Tests use fake `transformers`, fake torch, and fake `BitsAndBytesConfig` objects. They verify
+successful fake quantized execution and missing-dependency failure behavior without installing
+`bitsandbytes`.
+
+## Implementation Notes Connected to Code
+
+- Implemented in `src/airllm_ex05/runners/quantized_runner.py`.
+- Reuses baseline `_generate()` for text generation.
+- `_quantization_kwargs()` chooses 4-bit or 8-bit `BitsAndBytesConfig` when available, or a
+  dtype fallback if the API is absent.
+- Current real validation run failed before inference for both prompts due to missing
+  `bitsandbytes`.
