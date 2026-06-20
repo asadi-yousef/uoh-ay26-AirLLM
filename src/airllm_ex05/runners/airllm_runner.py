@@ -1,6 +1,7 @@
 """AirLLM runner."""
 
 import importlib
+import os
 import time
 from typing import Any
 
@@ -8,6 +9,7 @@ from airllm_ex05.config import ExperimentConfig
 from airllm_ex05.constants import RUNNER_AIRLLM
 from airllm_ex05.models import BenchmarkResult
 from airllm_ex05.runners.common import failed_result, iter_prompts, run_prompt
+from airllm_ex05.shared.paths import ensure_directory
 
 
 def run_airllm(config: ExperimentConfig) -> list[BenchmarkResult]:
@@ -45,6 +47,11 @@ def run_airllm(config: ExperimentConfig) -> list[BenchmarkResult]:
 
 def _load_airllm_model(config: ExperimentConfig, airllm: Any) -> tuple[Any, float]:
     started = time.perf_counter()
+    cache_dir = str(config.model.cache_dir)
+    layer_shards_path = ensure_directory(config.airllm.layer_shards_saving_path)
+    os.environ.setdefault("HF_HOME", cache_dir)
+    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", cache_dir)
+    os.environ.setdefault("TRANSFORMERS_CACHE", cache_dir)
     model_class = getattr(airllm, "AutoModel", None) or getattr(
         airllm, "AirLLMLlama2", None
     )
@@ -53,7 +60,7 @@ def _load_airllm_model(config: ExperimentConfig, airllm: Any) -> tuple[Any, floa
         raise RuntimeError(msg)
     model = model_class.from_pretrained(
         config.model.name,
-        layer_shards_saving_path=str(config.airllm.layer_shards_saving_path),
+        layer_shards_saving_path=str(layer_shards_path),
     )
     return model, time.perf_counter() - started
 

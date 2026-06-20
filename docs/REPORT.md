@@ -2,261 +2,207 @@
 
 ## Executive Summary
 
-This repository implements and runs a local LLM benchmarking pipeline for Exercise 05:
-direct Hugging Face inference, AirLLM-style inference, and quantized inference. The
-assignment asks for a model that is uncomfortable for the local machine and for a technical
-analysis of the memory, latency, paging, quantization, and economic tradeoffs. The current
-measured run should be interpreted as a pipeline validation run, not as the final stress-model
-experiment: the configured model is `sshleifer/tiny-gpt2`, which is intentionally small.
+This project now contains a complete local LLM experiment for Exercise 05 using
+`Qwen/Qwen2.5-3B-Instruct` on a CPU-only Windows laptop. The model is large enough to make
+direct local inference visibly slow on this machine, while still small enough to complete a
+bounded experiment with 16 output tokens.
 
-The run produced six raw benchmark records from two prompts and one run per prompt. The
-baseline `transformers` runner succeeded twice. The quantized CPU dynamic-int8 runner
-succeeded twice. The AirLLM runner failed twice during model loading because
-`optimum.bettertransformer` was missing. The remaining failure is a valid negative result for
-dependency readiness, but the run still does not demonstrate the assignment's intended
-large-model RAM/VRAM pressure.
+The final result set contains six benchmark records:
+
+- Baseline direct `transformers`: 2 successful runs.
+- CPU dynamic-int8 quantization: 2 successful runs.
+- AirLLM: 2 failed runs after successful layer-shard creation.
+
+The key engineering result is that direct CPU inference works but is slow: the two baseline
+generations took 50.33 seconds and 62.87 seconds, with exact TTFT values of 10.43 seconds and
+3.87 seconds. CPU dynamic-int8 quantization reduced generation latency to 11.88 seconds and
+6.18 seconds and improved throughput from about 0.45 tokens/second to 3.40 tokens/second on
+average. AirLLM created 76 layer-shard files totaling about 6.17 GB, proving that the paging
+setup began, but then failed during its internal load path with `IndexError: list index out of
+range`.
 
 ## Source Requirements
 
-The private course PDFs in `documents/` were inspected and remain ignored by Git. The
-exercise requires:
+The private PDFs in `documents/` were inspected and remain ignored by Git. The assignment
+requires a technical report and README that document hardware, justify the model choice,
+attempt direct baseline inference, run AirLLM and quantization on the same task, measure TTFT,
+TPOT, throughput, latency, RAM/VRAM, and output quality, and connect the results to Prefill,
+Decode, memory pressure, virtual memory, paging, quantization, and API versus on-premises
+economics.
 
-- Hardware documentation: CPU, core count, RAM, GPU/VRAM, CUDA availability, OS, Python, and
-  storage.
-- A Hugging Face model selected to be large or uncomfortable for the local hardware, with
-  justification by size, format, and expected memory footprint.
-- A direct baseline attempt, then the same task through AirLLM and quantization.
-- Metrics: total latency, TTFT, TPOT or ITL, throughput, peak RAM, peak VRAM, load time,
-  estimated power/cost, and output quality observations.
-- Analysis tied to lecture concepts: Prefill versus Decode, compute-bound versus
-  memory-bound behavior, VRAM/RAM pressure, virtual memory, paging, `mmap`, AirLLM layer
-  movement, quantization tradeoffs, and on-premises versus API economics.
-- Professional software expectations: `uv`, modular package structure, config-driven
-  behavior, no secrets or heavy generated files in Git, Ruff, pytest, and documentation.
+## Hardware
 
-## Hardware Specification
+The hardware snapshot in `results/raw/hardware.json` reports:
 
-The hardware snapshot was generated in `results/raw/hardware.json` and is ignored as a
-generated experiment artifact.
-
-| Field | Measured value |
+| Field | Value |
 | --- | --- |
 | CPU | Intel64 Family 6 Model 140 Stepping 1, GenuineIntel |
-| Physical cores | 4 |
-| Logical cores | 8 |
+| Physical / logical cores | 4 / 8 |
 | RAM | 15.70 GiB |
-| GPU | None detected |
-| VRAM | None detected |
+| GPU / VRAM | None detected |
 | CUDA | false |
 | OS | Windows 11 (10.0.26200) |
 | Python | 3.13.3 |
 | Storage C: | NTFS, 932.68 GiB total, 312.45 GiB free |
 | Storage G: | FAT32, 932.68 GiB total, 296.82 GiB free |
 
-This is CPU-only local inference hardware. The absence of CUDA and VRAM is central: direct
-GPU acceleration is unavailable, AirLLM would rely on CPU/disk behavior, and typical
-`bitsandbytes` CUDA quantization paths are unlikely to work on this machine without changing
-platform, dependencies, or backend.
+This is a CPU-only on-premises setup. There is no CUDA acceleration and no VRAM, so the
+experiment stresses system RAM, disk cache/offload behavior, CPU throughput, and Python/ML
+package compatibility.
 
 ## Model Choice
 
-Current configured model: `sshleifer/tiny-gpt2`.
+Final model: `Qwen/Qwen2.5-3B-Instruct`.
 
-This model is suitable for validating the software pipeline because it is public, small, fast
-to load, and cheap to test. It is not suitable as the final Exercise 05 stress model because
-it does not challenge 15.70 GiB RAM and does not demonstrate the intended large-model failure
-or paging behavior. The final manual run should replace it with a larger Hugging Face causal
-LM whose unquantized weights are large enough to stress CPU RAM or disk paging, while still
-being realistic for a bounded experiment.
+This model was selected after validating the pipeline with `sshleifer/tiny-gpt2` and trying
+`Qwen/Qwen2.5-1.5B-Instruct`. The final choice is stronger for the assignment because:
 
-The current model also explains the qualitative output: both successful baseline samples
-repeat the token "factors" many times. That is expected from a tiny validation model and is
-not evidence of useful answer quality.
+- It is materially larger than the validation model and stresses CPU-only inference.
+- It has a sharded SafeTensors index, which AirLLM requires.
+- It is still bounded enough to run on a 15.70 GiB RAM laptop with short output length.
+- It is an instruct model, so qualitative output can be inspected more meaningfully than with
+  tiny-gpt2.
 
-## Experiment Configuration
+The experiment used two prompts and `max_new_tokens: 16` to avoid turning the assignment into
+an hours-long benchmark.
 
-The active config in `configs/experiment.yaml` used:
+## Measurement Table
 
-| Setting | Value |
-| --- | --- |
-| Prompts | 2 prompts about Prefill/Decode and paging |
-| Runs | 1 per prompt |
-| Max new tokens | 32 |
-| Baseline mode | `transformers` |
-| AirLLM mode | `airllm` |
-| Quantization mode | `dynamic_int8`, 8-bit |
-| Model cache | `model_cache/huggingface` |
-| AirLLM shard cache | `airllm_cache/layer_shards` |
-| Raw outputs | `results/raw` |
-| Processed outputs | `results/processed` |
-| Figures | `results/figures` |
+| Runner | Prompt | Status | Load s | Latency s | TTFT s | TPOT s/token | Throughput tok/s | Output tokens | Peak RAM MB | Peak VRAM MB | Failure |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| baseline | 0 | success | 710.513 | 50.329 | 10.435 | 2.288 | 0.437 | 22 | 7737.29 | n/a | n/a |
+| baseline | 1 | success | 710.513 | 62.872 | 3.872 | 2.168 | 0.461 | 29 | 7742.39 | n/a | n/a |
+| quantized | 0 | success | 159.312 | 11.875 | 5.562 | 0.440 | 2.274 | 27 | 9566.62 | n/a | n/a |
+| quantized | 1 | success | 159.312 | 6.183 | 0.442 | 0.221 | 4.529 | 28 | 9573.74 | n/a | n/a |
+| airllm | 0 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | `IndexError: list index out of range` |
+| airllm | 1 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | same as above |
 
-The experiment commands inferred from the output set are:
+Derived averages from successful runs:
 
-```bash
-uv run airllm-ex05 hardware
-uv run airllm-ex05 baseline --config configs/experiment.yaml
-uv run airllm-ex05 airllm --config configs/experiment.yaml
-uv run airllm-ex05 quantized --config configs/experiment.yaml
-uv run airllm-ex05 analyze --config configs/experiment.yaml
-uv run airllm-ex05 report --config configs/experiment.yaml
-```
+| Metric | Baseline | Quantized dynamic-int8 | Interpretation |
+| --- | ---: | ---: | --- |
+| Load time | 710.51 s | 159.31 s | Quantized path loaded about 4.46x faster. |
+| Generation latency | 56.60 s | 9.03 s | Quantized generation was about 6.27x faster. |
+| TTFT | 7.15 s | 3.00 s | Quantized path reduced visible startup delay. |
+| TPOT | 2.23 s/token | 0.33 s/token | Quantized decode was about 6.74x faster. |
+| Throughput | 0.45 tok/s | 3.40 tok/s | Quantized throughput was about 7.57x higher. |
+| Peak process RAM | 7739.84 MB | 9570.18 MB | Dynamic quantization increased total process RSS here. |
 
-## Raw Result Summary
+## Baseline Analysis
 
-| Runner | Prompt | Status | Load s | Latency s | TPOT s/token | Throughput tok/s | Output tokens | Peak RAM MB | Peak VRAM MB | Failure |
-| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| baseline | 0 | success | 20.703 | 0.102889 | 0.002393 | 417.924 | 43 | 389.88 | n/a | n/a |
-| baseline | 1 | success | 20.703 | 0.051292 | 0.001115 | 896.826 | 46 | 389.95 | n/a | n/a |
-| airllm | 0 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | `ModuleNotFoundError: No module named 'optimum.bettertransformer'` |
-| airllm | 1 | failed | n/a | n/a | n/a | n/a | n/a | n/a | n/a | same as above |
-| quantized | 0 | success | 4.987 | 0.152255 | 0.003541 | 282.420 | 43 | 366.14 | n/a | n/a |
-| quantized | 1 | success | 4.987 | 0.050894 | 0.001106 | 903.846 | 46 | 366.21 | n/a | n/a |
+The direct baseline succeeded, but it is slow enough to satisfy the assignment's requirement
+for an uncomfortable local run. Initial loading took 710.51 seconds, including model shard
+download and checkpoint loading. Transformers/Accelerate reported that some parameters were
+offloaded to CPU and disk, which is direct evidence of memory pressure and offload behavior on
+this CPU-only laptop.
 
-Baseline average generation latency across the two prompts was about 0.077091 seconds. The
-average of the two reported throughput values was about 657.375 tokens/second, while aggregate
-throughput across both prompts was about 577.25 tokens/second. Peak process RAM stayed near
-389.9 MB. Quantized average generation latency was about 0.101574 seconds; its average of
-reported throughput values was about 593.133 tokens/second, while aggregate throughput across
-both quantized prompts was about 438.53 tokens/second. Quantized peak process RAM stayed near
-366.2 MB. TTFT was not measured because the current runner uses non-streaming generation.
+Generation was also slow:
 
-## Baseline Direct Run
+- Prompt 0: 50.33 seconds total, TTFT 10.43 seconds, TPOT 2.29 seconds/token.
+- Prompt 1: 62.87 seconds total, TTFT 3.87 seconds, TPOT 2.17 seconds/token.
 
-The direct Hugging Face baseline succeeded with `sshleifer/tiny-gpt2`. Loading took 20.703
-seconds, much longer than either measured generation call. This is expected for a first local
-model load on CPU because dependency initialization, cache access, and model construction are
-front-loaded.
+The bottleneck is not VRAM, because the machine has no CUDA-visible GPU. It is CPU/RAM/disk
+bound: the model can run, but the combination of CPU execution and offload makes both startup
+and decode slow.
 
-The successful generation latencies were very small because the model is tiny. This means the
-baseline results validate the benchmark plumbing, but they do not establish a direct-inference
-bottleneck. There is no evidence in the current result files of out-of-memory behavior,
-excessive swap, CUDA pressure, or VRAM pressure during baseline.
+## AirLLM Analysis
 
-Generated samples:
+AirLLM was made importable by pinning compatible dependencies:
 
-- Prompt 0 output repeated "factors" after the original prompt.
-- Prompt 1 output also repeated "factors" after the original prompt.
+- `optimum>=1.27,<2`
+- `transformers>=4.42,<4.49`
+- `sentencepiece>=0.2`
 
-The qualitative result is poor, but this is a model-choice artifact, not a quantization or
-AirLLM finding.
+The first AirLLM attempts failed on tiny-gpt2 and Qwen2.5-1.5B because those checkpoints did
+not provide the sharded SafeTensors index expected by AirLLM. `Qwen/Qwen2.5-3B-Instruct` does
+provide that index. With this model, AirLLM successfully fetched the files and split the model
+into 76 layer-shard files under `airllm_cache/layer_shards/splitted_model`, totaling about
+6.17 GB.
 
-## AirLLM Result
-
-AirLLM failed during load for both prompts:
+The actual AirLLM inference still failed during the load path:
 
 ```text
-ModuleNotFoundError: No module named 'optimum.bettertransformer'
+IndexError: list index out of range
 ```
 
-The failure occurred before inference, so there are no AirLLM latency, throughput, RAM, or
-quality measurements. This is a dependency readiness failure rather than a measured AirLLM
-performance failure. It still matters for the engineering report: the AirLLM path is optional,
-version-sensitive, and depends on packages that may not be available in the default environment.
+This is a negative result, but it is a useful one. It shows that the paging-style preparation
+worked, while the installed AirLLM package did not complete a usable Qwen2.5-3B load on this
+Windows/Python environment. The assignment explicitly allows negative results when they are
+measured and explained. The engineering conclusion is that AirLLM reduces the theoretical
+memory-residency requirement by sharding layers, but package/model/platform compatibility is a
+real operational risk.
 
-Conceptually, AirLLM is relevant because it changes the resource allocation model. Instead of
-requiring all weights to be resident in RAM or VRAM, it loads model layers progressively from
-disk, similar to virtual memory paging. That can make a too-large model runnable on modest
-hardware, but it normally increases latency because disk I/O enters the forward pass. The
-current run did not reach that stage, so this conclusion remains theoretical for this machine
-until the missing dependency is resolved and a stress model is tested.
+## Quantization Analysis
 
-## Quantized Result
+The project uses CPU dynamic-int8 quantization through `torch.ao.quantization.quantize_dynamic`
+because this machine has no CUDA and Windows `bitsandbytes` support is limited. This is not
+the same as 4-bit CUDA quantization, but it is a valid lower-precision local inference path for
+the observed hardware.
 
-The quantized runner now uses CPU `torch.dynamic_int8`, which is a realistic fallback for this
-Windows CPU-only machine. It succeeded for both prompts. Compared with baseline, quantized load
-time dropped from 20.703 seconds to 4.987 seconds and peak RAM dropped from about 389.9 MB to
-about 366.2 MB. Generation was mixed: prompt 0 became slower, 0.152255 seconds versus 0.102889
-seconds, while prompt 1 was effectively equal, 0.050894 seconds versus 0.051292 seconds.
+The quantized path succeeded for both prompts:
 
-The output text was qualitatively the same as baseline: both prompts repeated "factors". For
-this tiny validation model, quantization did not create an observable additional quality loss,
-but the model itself is too weak to make a meaningful quality claim. The useful conclusion is
-engineering-oriented: CPU dynamic int8 provides a functioning quantized path on the observed
-hardware, while the previous `bitsandbytes` 4-bit path was not appropriate for this Windows
-CPU-only environment.
+- Prompt 0: latency 11.88 seconds, TTFT 5.56 seconds, TPOT 0.44 seconds/token.
+- Prompt 1: latency 6.18 seconds, TTFT 0.44 seconds, TPOT 0.22 seconds/token.
+
+Compared with baseline, quantization substantially improved latency, decode speed, and
+throughput. The tradeoff is that peak process RSS was higher in this implementation. That can
+happen because PyTorch dynamic quantization may keep additional module structures or temporary
+copies during conversion; quantization reduced compute/decode cost, but did not reduce total
+process memory in this measured run.
+
+Qualitatively, both baseline and quantized outputs are short but relevant. Baseline prompt 0
+began explaining Prefill in local LLM inference. Baseline prompt 1 correctly described paging
+as using external storage/memory management. Quantized prompt 1 also gave an appropriate
+summary. Quantized prompt 0 drifted into a less relevant phrasing, so quality was acceptable
+for pipeline evidence but not clearly better than baseline.
 
 ## Prefill, Decode, TTFT, and TPOT
 
-The lecture separates inference into two phases:
+Prefill processes the prompt and prepares internal state. In serving metrics, TTFT is the
+visible delay until the first generated token and is a practical proxy for prefill plus startup
+overheads. Decode emits one token at a time; TPOT captures the steady-state decode cost.
 
-- Prefill: the model processes the prompt and builds internal state such as the KV cache. This
-  is more parallel and usually compute-bound on GPU hardware.
-- Decode: the model emits one token at a time. This is sequential and often memory-bandwidth
-  bound because weights and cached state must be accessed repeatedly.
+This project now measures TTFT for Transformers-based runners using streaming generation.
+The measurements show:
 
-The current benchmark approximates TPOT as total generation latency divided by output token
-count. It does not measure TTFT because `model.generate(...)` is called without token streaming.
-Therefore:
+- Baseline TTFT can be several seconds on CPU, especially when the model is offloaded.
+- Baseline TPOT around 2.2 seconds/token means decode is very slow.
+- Quantized TPOT around 0.33 seconds/token shows a major decode improvement.
 
-- TTFT is missing in the current evidence.
-- TPOT is available for successful baseline and quantized runs.
-- The measured TPOT values, 2.393 ms/token and 1.115 ms/token, are validation-model numbers
-  for baseline; quantized TPOT values were 3.541 ms/token and 1.106 ms/token. These numbers
-  should not be generalized to large local LLM serving.
+The result matches the lecture model: on limited local hardware, decode is strongly affected
+by memory movement and CPU throughput. Quantization reduces the amount and cost of work during
+generation, so throughput improves.
 
-For the final stress experiment, a streaming callback or token-level timing hook should be
-added if exact TTFT and inter-token latency are required.
+## Memory, VRAM, and Paging
 
-## Memory-Bound Versus Compute-Bound Analysis
+There is no VRAM measurement because no GPU was detected. All memory pressure is system RAM
+and disk/cache behavior.
 
-The current run does not show a hardware bottleneck. Peak baseline RAM was about 390 MB and
-peak quantized RAM was about 366 MB, both far below the machine's 15.70 GiB RAM. There is no
-detected GPU or VRAM, so no VRAM saturation can be analyzed. The successful baseline and
-quantized generations were fast because the model is too small.
+Baseline peak RSS was about 7.74 GB, and Transformers reported CPU/disk offload. Quantized
+peak RSS was about 9.57 GB, which is higher despite faster generation. AirLLM created disk
+layer shards totaling about 6.17 GB. These three facts illustrate the central memory tradeoff:
 
-For the intended final experiment, the diagnostic logic should be:
+- Direct Transformers can use offload to make a 3B model run, but latency is high.
+- Dynamic int8 can speed up CPU generation, but process RSS is not guaranteed to drop.
+- AirLLM explicitly materializes layer files and tries to page through them, but the current
+  package/model/platform combination failed before generation.
 
-- If direct loading fails or the OS starts swapping heavily, the bottleneck is RAM capacity or
-  virtual memory pressure.
-- If CUDA exists and VRAM fills before generation starts, the bottleneck is VRAM capacity.
-- If Prefill dominates TTFT on GPU, the path is likely compute-bound.
-- If Decode has high TPOT and low arithmetic utilization, the path is likely memory-bandwidth
-  or I/O bound.
-- If AirLLM runs but latency increases sharply, the likely cause is layer paging and disk I/O.
+## Figures
 
-## VRAM, RAM, Paging, and AirLLM
+The generated figures are:
 
-This machine has no CUDA-visible GPU. All successful work in the current run used CPU and RAM.
-That makes AirLLM's paging idea especially relevant for future runs: if a larger model cannot
-fit comfortably in RAM, AirLLM may move the bottleneck from memory capacity to disk bandwidth
-and page-cache behavior.
+- `results/figures/latency.png`: baseline versus quantized generation latency.
+- `results/figures/throughput.png`: baseline versus quantized throughput.
+- `results/figures/memory.png`: baseline versus quantized peak process RAM.
+- `results/figures/cost_curve.png`: API versus local monthly cost curve.
 
-The assignment and lecture compare AirLLM to virtual memory:
-
-- Model layers behave like pages.
-- Disk-backed shards behave like a backing store.
-- The operating system page cache and `mmap`-style access can reduce explicit copying.
-- The price is latency, because page misses and disk reads are much slower than RAM/VRAM.
-
-The current AirLLM failure means no empirical paging measurements were produced. This should be
-called out as a limitation, not hidden.
-
-## Figures and Tables
-
-Generated figures exist under `results/figures/`:
-
-- `latency.png`: bar chart for successful baseline and quantized latency.
-- `throughput.png`: bar chart for successful baseline and quantized throughput.
-- `memory.png`: bar chart for successful baseline and quantized peak RAM.
-- `cost_curve.png`: API versus on-premises monthly cost curve from configured assumptions.
-
-Because AirLLM failed before inference, the metric plots contain baseline and quantized bars
-only. The cost plot is still useful because it is computed from the benchmark-derived average
-request shape and configured cost assumptions.
-
-Generated tabular outputs exist under `results/processed/`:
-
-- `analysis.json`: 6 results, 4 successes, 2 failures, no break-even point in configured
-  request volumes.
-- `comparison_table.csv`: flattened benchmark table with all successes and failures.
-
-These files are ignored by Git and should remain uncommitted. Their important evidence is
-summarized in this report.
+The latency and throughput plots show the strongest result: dynamic-int8 quantization made the
+3B model much more usable on this CPU-only laptop. The memory plot shows the important caveat:
+this quantized path used more process RAM, not less.
 
 ## Economic Analysis
 
-Configured cost assumptions:
+Configured assumptions:
 
 | Assumption | Value |
 | --- | ---: |
@@ -273,56 +219,44 @@ The processed cost curve reports:
 
 | Monthly requests | API cost USD | Local cost USD | API/request USD | Local/request USD |
 | ---: | ---: | ---: | ---: | ---: |
-| 100 | 0.002775 | 43.333423 | 0.00002775 | 0.43333423 |
-| 1,000 | 0.027750 | 43.334227 | 0.00002775 | 0.04333423 |
-| 10,000 | 0.277500 | 43.342267 | 0.00002775 | 0.00433423 |
-| 100,000 | 2.775000 | 43.422666 | 0.00002775 | 0.00043423 |
+| 100 | 0.001695 | 43.366148 | 0.00001695 | 0.43366148 |
+| 1,000 | 0.016950 | 43.661484 | 0.00001695 | 0.04366148 |
+| 10,000 | 0.169500 | 46.614835 | 0.00001695 | 0.00466148 |
+| 100,000 | 1.695000 | 76.148354 | 0.00001695 | 0.00076148 |
 
-No break-even request volume appears in the configured range. This is unsurprising: the
-validation model uses tiny prompts and tiny outputs, so API token costs stay extremely low,
-while local cost includes fixed amortized hardware and maintenance. Local execution could
-still be justified for privacy, offline operation, regulatory constraints, or very high
-volumes, but the current numbers do not justify it economically for this tiny workload.
+No break-even point appears in the configured request range. For this small two-prompt
+workload, API token pricing is far cheaper than amortized local hardware and maintenance.
+Local inference is still justified when privacy, offline execution, regulatory control, or
+data residency matters more than direct cost.
 
-Prompt/context caching is represented by the cached input discount. For repetitive workloads
-with a large shared system prompt or document context, API caching can move the break-even
-point further away from local execution by reducing repeated Prefill cost.
+Prompt caching strengthens the API side for repeated long prompts because shared context can
+be billed at a discount and may avoid repeated Prefill work. That pushes the economic
+break-even point further away from local inference for repetitive workloads.
 
-## Limitations and Negative Results
+## Limitations
 
-Current limitations:
+- Only one final model size was benchmarked.
+- Output length was intentionally short, `max_new_tokens: 16`, to keep the experiment bounded.
+- Power draw was estimated from config, not measured from the wall.
+- AirLLM did not complete generation, so its latency/throughput could not be compared.
+- The quantized path is CPU dynamic int8, not 4-bit CUDA quantization.
+- Peak RAM is process RSS sampled during generation; it may miss short conversion/load peaks.
+- Generated raw results and model caches remain ignored by Git.
 
-- The model is not the final stress model required by the exercise.
-- No GPU or CUDA device was detected, so no VRAM behavior was measured.
-- TTFT is not measured because generation is not streamed.
-- AirLLM failed before inference because `optimum.bettertransformer` was missing.
-- Output quality comparison is limited to tiny-gpt2 samples; baseline and quantized outputs
-  are nearly identical and poor, while AirLLM outputs do not exist.
-- The cost model is deterministic and useful for comparison, but it uses configured
-  assumptions rather than measured wall-power data.
+## Final Conclusions
 
-Negative results:
+The final experiment satisfies the core engineering intent of the assignment. A 3B instruct
+model runs locally on CPU-only hardware, but direct baseline inference is slow and visibly
+resource constrained. Exact TTFT and TPOT measurements show high startup and decode costs.
+CPU dynamic-int8 quantization makes the same model much more usable, improving generation
+latency by about 6.27x and throughput by about 7.57x, although it increases measured process
+RSS in this implementation.
 
-- AirLLM path: failed at load stage for both prompts.
-- Previous quantized `bitsandbytes` path: failed at load stage for both prompts.
-- Current quantized `torch.dynamic_int8` path: succeeded for both prompts.
-- Baseline did not fail, but it also did not demonstrate the intended large-model bottleneck.
+AirLLM partially succeeded: it fetched the sharded model and created 6.17 GB of per-layer
+SafeTensors shards, demonstrating the paging-oriented setup. It failed before generation with
+an internal index error, which should be reported as a negative compatibility result rather
+than hidden.
 
-## Engineering Conclusions
-
-The software pipeline is in good shape for the assignment workflow: it collects hardware,
-loads YAML config, runs the three execution modes, serializes structured successes and
-failures, writes CSV/JSON analysis, generates plots, and produces a Markdown report. The
-ignored generated outputs contain enough evidence to document the validation run without
-committing raw experiment files.
-
-The experiment itself is not yet final-submission complete. It proves the code path, but not
-the assignment's central hardware stress claim. Before final manual submission, the project
-needs one more real experiment pass with a model selected to stress this CPU-only, 15.70 GiB
-RAM machine, plus either a working AirLLM dependency set or a clearly documented reason why
-AirLLM cannot run on the target environment.
-
-The most defensible final conclusion from current evidence is narrow: the repository is a
-reproducible measurement framework, the baseline validation run works, CPU dynamic-int8
-quantization works on this machine, and the AirLLM path exposes a concrete dependency blocker.
-The larger performance, paging, and quantization claims still require a final stress-model run.
+For this machine and workload, API usage remains cheaper in direct dollars. Local inference is
+most defensible for privacy, offline work, and learning how on-premises LLM deployment behaves
+under real CPU/RAM/disk constraints.

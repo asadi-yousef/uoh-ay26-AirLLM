@@ -18,7 +18,9 @@ models = [
   "accelerate>=0.30",
   "airllm>=2.11",
   "bitsandbytes>=0.43; platform_system != 'Windows'",
-  "transformers>=4.42",
+  "optimum>=1.27,<2",
+  "sentencepiece>=0.2",
+  "transformers>=4.42,<4.49",
 ]
 dev = [
   "pytest>=8.2",

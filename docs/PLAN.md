@@ -76,9 +76,10 @@ uv run ruff check .
 uv run pytest
 ```
 
-The current run used `sshleifer/tiny-gpt2`, two prompts, one run each, and 32 max new tokens.
-Baseline and CPU dynamic-int8 quantized modes succeeded. AirLLM failed during load due to the
-missing `optimum.bettertransformer` dependency.
+The final run used `Qwen/Qwen2.5-3B-Instruct`, two prompts, one run each, and 16 max new
+tokens. Baseline and CPU dynamic-int8 quantized modes succeeded. AirLLM successfully created
+6.17 GB of layer shards, then failed during its internal load path with
+`IndexError: list index out of range`.
 
 ## Result File Structure
 
@@ -110,8 +111,8 @@ Generated result files are ignored by Git. Important evidence is summarized in
 
 ## Design Decisions and Alternatives
 
-- Use a tiny default model for pipeline validation, then require manual replacement for the
-  final stress experiment.
+- Use `Qwen/Qwen2.5-3B-Instruct` as the bounded final stress model because it stresses the
+  CPU-only machine and has the sharded SafeTensors index required by AirLLM.
 - Use structured failed results instead of allowing runner exceptions to abort the experiment.
 - Lazy-import heavy dependencies so tests and docs can run without model packages.
 - Store raw generated evidence locally but ignore it in Git.
@@ -119,20 +120,21 @@ Generated result files are ignored by Git. Important evidence is summarized in
   later.
 - Use CPU dynamic-int8 quantization as the default on this Windows CPU-only machine, while
   preserving the `bitsandbytes` path for CUDA environments.
-- Use non-streaming generation for portability; exact TTFT requires a future streaming hook.
+- Use streaming generation for Transformers baseline and quantized modes so TTFT is measured,
+  while preserving a non-streaming fallback.
 
 ## Mapping to Assignment Requirements
 
 | Assignment requirement | Current project support | Current evidence |
 | --- | --- | --- |
 | Hardware documentation | `hardware.py` and `hardware` CLI | Present in ignored `hardware.json` |
-| Model choice and justification | Config and report | Current model is validation-only |
-| Baseline run | `baseline_runner.py` | Succeeded twice |
-| AirLLM run | `airllm_runner.py` | Failed at load due to missing dependency |
+| Model choice and justification | Config and report | Qwen2.5-3B selected as bounded stress model |
+| Baseline run | `baseline_runner.py` | Succeeded twice, but very slowly |
+| AirLLM run | `airllm_runner.py` | Sharded model, then failed with internal index error |
 | Quantization run | `quantized_runner.py` | Succeeded with CPU dynamic int8 |
-| TTFT/TPOT/throughput/latency | Metrics schema and derived TPOT/throughput | TPOT/throughput present for baseline; TTFT missing |
+| TTFT/TPOT/throughput/latency | Metrics schema and streaming TTFT for Transformers | Present for baseline and quantized |
 | RAM/VRAM | RAM sampler and CUDA peak helper | RAM present for baseline and quantized; no VRAM detected |
 | Plots/tables | `plotting.py`, `report.py` | Generated from current evidence |
 | Economic analysis | `cost_analysis.py` | No break-even in configured volumes |
-| Negative results | Structured failures | AirLLM and quantized failures preserved |
-| Final technical report | `docs/REPORT.md` | Expanded with real validation results |
+| Negative results | Structured failures | AirLLM failure preserved and explained |
+| Final technical report | `docs/REPORT.md` and `README.md` | Expanded with final 3B results |

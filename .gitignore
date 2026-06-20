@@ -44,6 +44,8 @@ results/figures/*.svg
 !results/raw/.gitkeep
 !results/processed/.gitkeep
 !results/figures/.gitkeep
+!results/processed/comparison_table.csv
+!results/figures/*.png
 
 # Local editor and OS files
 .vscode/

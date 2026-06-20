@@ -17,9 +17,9 @@ and no private PDFs, secrets, model weights, caches, or heavy generated files in
 
 ## Relation to Exercise 05
 
-This project is the experiment harness and documentation system for the assignment. It does
-not hardcode a final model; the model is selected in `configs/experiment.yaml` so the same code
-can first validate the pipeline with a tiny model and then run the final stress experiment.
+This project is the experiment harness and documentation system for the assignment. The final
+configured model is `Qwen/Qwen2.5-3B-Instruct`, selected to stress CPU-only inference while
+remaining bounded enough for a short local run.
 
 ## Functional Requirements
 

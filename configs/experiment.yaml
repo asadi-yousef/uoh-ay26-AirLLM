@@ -1,9 +1,9 @@
-# Default experiment for Exercise 05.
-# The model is intentionally configurable. Start with this small public model to
-# verify the pipeline, then replace it with a larger stress model justified by
-# your hardware, such as a 7B+ instruct model.
+# Default final experiment for Exercise 05.
+# Qwen2.5-3B-Instruct is large enough to stress CPU-only local inference,
+# has a sharded SafeTensors index needed by AirLLM, and remains bounded
+# enough for a short 16-token experiment on a 16 GiB RAM laptop.
 model:
-  name: "sshleifer/tiny-gpt2"
+  name: "Qwen/Qwen2.5-3B-Instruct"
   cache_dir: "model_cache/huggingface"
   trust_remote_code: false
   device: "auto"
@@ -12,7 +12,7 @@ benchmark:
   prompts:
     - "Explain the difference between prefill and decode in local LLM inference."
     - "Summarize why paging can help run a model that does not fit in VRAM."
-  max_new_tokens: 32
+  max_new_tokens: 16
   runs: 1
   warmup_runs: 0
   timeout_seconds: 900

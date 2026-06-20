@@ -2,6 +2,7 @@
 
 import time
 from collections.abc import Callable
+from typing import TypeAlias
 
 from airllm_ex05.config import ExperimentConfig
 from airllm_ex05.metrics import (
@@ -12,6 +13,8 @@ from airllm_ex05.metrics import (
     tokens_per_second,
 )
 from airllm_ex05.models import BenchmarkResult, MetricSummary
+
+GeneratedOutput: TypeAlias = str | tuple[str, float | None]
 
 
 def failed_result(
@@ -43,15 +46,16 @@ def run_prompt(
     prompt: str,
     prompt_index: int,
     run_index: int,
-    generation: Callable[[], str],
+    generation: Callable[[], GeneratedOutput],
     load_time_seconds: float | None,
     metadata: dict[str, object] | None = None,
 ) -> BenchmarkResult:
     """Measure one prompt generation call."""
     sampler = MemorySampler()
     started = time.perf_counter()
-    generated = sampler.run(generation)
+    generated_output = sampler.run(generation)
     latency = time.perf_counter() - started
+    generated, ttft = _normalize_generated_output(generated_output)
     output_tokens = count_simple_tokens(generated)
     return BenchmarkResult(
         runner=runner,
@@ -65,6 +69,7 @@ def run_prompt(
         metrics=MetricSummary(
             load_time_seconds=load_time_seconds,
             total_latency_seconds=latency,
+            time_to_first_token_seconds=ttft,
             time_per_output_token_seconds=time_per_token(output_tokens, latency),
             tokens_per_second=tokens_per_second(output_tokens, latency),
             input_tokens=count_simple_tokens(prompt),
@@ -82,3 +87,9 @@ def iter_prompts(config: ExperimentConfig) -> list[tuple[str, int, int]]:
         for prompt_index, prompt in enumerate(config.benchmark.prompts)
         for run_index in range(config.benchmark.runs)
     ]
+
+
+def _normalize_generated_output(output: GeneratedOutput) -> tuple[str, float | None]:
+    if isinstance(output, tuple):
+        return output
+    return output, None

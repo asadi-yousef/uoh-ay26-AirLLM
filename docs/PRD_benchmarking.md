@@ -84,5 +84,5 @@ fake runner success paths, and fake/missing dependency failure paths.
 - `metrics.py` implements simple token counting, TPOT, throughput, RAM sampling, and CUDA peak
   memory.
 - `runners/common.py` implements `iter_prompts`, `run_prompt`, and `failed_result`.
-- Current validation evidence includes two successful baseline results and four load-stage
-  failures.
+- Current final evidence includes two successful baseline results, two successful quantized
+  results with TTFT, and two structured AirLLM failures after layer-shard creation.

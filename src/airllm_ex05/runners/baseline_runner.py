@@ -1,13 +1,14 @@
 """Direct Hugging Face baseline runner."""
 
 import importlib
+import threading
 import time
 from typing import Any
 
 from airllm_ex05.config import ExperimentConfig
 from airllm_ex05.constants import RUNNER_BASELINE
 from airllm_ex05.models import BenchmarkResult
-from airllm_ex05.runners.common import failed_result, iter_prompts, run_prompt
+from airllm_ex05.runners.common import GeneratedOutput, failed_result, iter_prompts, run_prompt
 
 
 def run_baseline(config: ExperimentConfig) -> list[BenchmarkResult]:
@@ -65,10 +66,69 @@ def _load_model(config: ExperimentConfig, transformers: Any, torch: Any) -> tupl
     return model, tokenizer, time.perf_counter() - started
 
 
-def _generate(model: Any, tokenizer: Any, prompt: str, max_new_tokens: int) -> str:
+def _generate(model: Any, tokenizer: Any, prompt: str, max_new_tokens: int) -> GeneratedOutput:
+    streamer_class = getattr(importlib.import_module("transformers"), "TextIteratorStreamer", None)
+    if streamer_class is not None:
+        streamed = _generate_streamed(model, tokenizer, streamer_class, prompt, max_new_tokens)
+        if streamed is not None:
+            return streamed
+
     inputs = tokenizer(prompt, return_tensors="pt")
     device = getattr(model, "device", None)
     if device is not None:
         inputs = {key: value.to(device) for key, value in inputs.items()}
     output = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
     return tokenizer.decode(output[0], skip_special_tokens=True)
+
+
+def _generate_streamed(
+    model: Any,
+    tokenizer: Any,
+    streamer_class: Any,
+    prompt: str,
+    max_new_tokens: int,
+) -> tuple[str, float | None] | None:
+    try:
+        streamer = streamer_class(tokenizer, skip_prompt=True, skip_special_tokens=True)
+    except TypeError:
+        return None
+    inputs = tokenizer(prompt, return_tensors="pt")
+    device = getattr(model, "device", None)
+    if device is not None:
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+    generated_parts = []
+    error: list[BaseException] = []
+    started = time.perf_counter()
+    thread = threading.Thread(
+        target=_generate_in_thread,
+        args=(model, inputs, streamer, max_new_tokens, error),
+        daemon=True,
+    )
+    thread.start()
+    first_token_time = None
+    for chunk in streamer:
+        if chunk and first_token_time is None:
+            first_token_time = time.perf_counter() - started
+        generated_parts.append(chunk)
+    thread.join()
+    if error:
+        raise error[0]
+    return prompt + "".join(generated_parts), first_token_time
+
+
+def _generate_in_thread(
+    model: Any,
+    inputs: dict[str, Any],
+    streamer: Any,
+    max_new_tokens: int,
+    error: list[BaseException],
+) -> None:
+    try:
+        model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            streamer=streamer,
+        )
+    except BaseException as exc:
+        error.append(exc)

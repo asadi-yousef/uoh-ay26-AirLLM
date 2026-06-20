@@ -61,7 +61,7 @@ Outputs:
 
 ## Risks and Failure Modes
 
-- Missing dependency, currently observed as `No module named 'optimum.bettertransformer'`.
+- Version compatibility between AirLLM, Optimum, and Transformers.
 - AirLLM API changes, for example no compatible `AutoModel` or `AirLLMLlama2`.
 - Model architecture unsupported by installed AirLLM.
 - Layer shard creation fills disk or uses a slow drive.
@@ -78,5 +78,5 @@ models.
 - Implemented in `src/airllm_ex05/runners/airllm_runner.py`.
 - Shared success/failure measurement is in `runners/common.py`.
 - Result constants are defined in `constants.py`.
-- Current real validation run failed at load stage for both prompts because
-  `optimum.bettertransformer` was missing.
+- Current final run imports AirLLM successfully and creates Qwen2.5-3B layer shards, but fails
+  during AirLLM's internal load path with `IndexError: list index out of range`.

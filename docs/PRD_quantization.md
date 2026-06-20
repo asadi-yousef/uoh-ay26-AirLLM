@@ -57,7 +57,7 @@ Outputs:
   prompt/run.
 - Missing or unsupported `bitsandbytes` produces failed results with clear error messages when
   that mode is selected.
-- CPU dynamic-int8 runs successfully on the validation machine.
+- CPU dynamic-int8 runs successfully on the final Qwen2.5-3B experiment.
 - Successful quantized runs include latency, TPOT, throughput, RAM, VRAM, generated text, and
   quantization metadata.
 
@@ -81,4 +81,5 @@ successful fake quantized execution and missing-dependency failure behavior with
 - Reuses baseline `_generate()` for text generation.
 - `_quantization_kwargs()` chooses 4-bit or 8-bit `BitsAndBytesConfig` when available, or a
   dtype fallback if the API is absent.
-- Current real validation run succeeded for both prompts with `torch.dynamic_int8`.
+- Current final run succeeded for both prompts with `torch.dynamic_int8`, improving average
+  latency and throughput while increasing measured process RSS.

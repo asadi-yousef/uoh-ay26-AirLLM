@@ -15,7 +15,8 @@ a technical report.
 - `src/airllm_ex05/` contains the package, CLI, hardware collector, benchmark schemas,
   runners, analysis, plotting, and report generation.
 - `docs/` contains PRDs, implementation plan, TODO, and `REPORT.md`.
-- `results/` is the local output area. Heavy/generated files are ignored by Git.
+- `results/` is the local output area. Raw model outputs and caches are ignored by Git;
+  the small final figures are committed because the assignment requires visual evidence.
 - `tests/` contains lightweight pytest tests that do not download models.
 
 ## Installation
@@ -52,10 +53,15 @@ issues, or incompatibility, the failure is saved as a structured result.
 
 ## Configuration
 
-Edit `configs/experiment.yaml` before the final experiment:
+The committed config is set for the final bounded stress experiment:
 
-- Replace `sshleifer/tiny-gpt2` with a larger Hugging Face model justified by your hardware.
-- Keep initial `max_new_tokens` low while validating the pipeline.
+- Model: `Qwen/Qwen2.5-3B-Instruct`
+- Output length: `max_new_tokens: 16`
+- Quantization: CPU `dynamic_int8`
+
+For further experiments:
+
+- Keep `max_new_tokens` low while validating the pipeline.
 - Set `model.cache_dir` and `airllm.layer_shards_saving_path` to a disk with enough space.
 - Adjust API pricing, hardware cost, electricity, and request volumes for the cost analysis.
 
@@ -72,28 +78,42 @@ Hugging Face login flow.
 - `results/figures/*.png`: latency, throughput, memory, and cost plots.
 - `docs/REPORT.md`: generated Markdown report.
 
-## Current Validation Run
+## Final Experiment Summary
 
-The current ignored result files document a pipeline validation run with `sshleifer/tiny-gpt2`,
-two prompts, one run per prompt, and `max_new_tokens: 32`.
+The final local experiment uses `Qwen/Qwen2.5-3B-Instruct`, two prompts, one run per prompt,
+and `max_new_tokens: 16` on a CPU-only Windows laptop.
 
 - Hardware: Windows 11, Intel CPU, 4 physical cores, 8 logical cores, 15.70 GiB RAM, no
   CUDA-visible GPU or VRAM.
-- Baseline: succeeded for both prompts through `transformers`; load time was 20.703 seconds,
-  generation latency was 0.102889 seconds and 0.051292 seconds, and peak process RAM was about
-  390 MB.
-- AirLLM: failed during load for both prompts with
-  `ModuleNotFoundError: No module named 'optimum.bettertransformer'`.
-- Quantized: succeeded for both prompts with CPU `torch.dynamic_int8`; load time was 4.987
-  seconds, generation latency was 0.152255 seconds and 0.050894 seconds, and peak process RAM
-  was about 366 MB.
+- Baseline: succeeded, but it was slow. Load time was 710.51 seconds; generation latencies were
+  50.33 seconds and 62.87 seconds; average throughput was about 0.45 tokens/second.
+- AirLLM: successfully created 76 layer shard files totaling about 6.17 GB, then failed during
+  load with `IndexError: list index out of range`. This is reported as a negative compatibility
+  result.
+- Quantized: succeeded with CPU `torch.dynamic_int8`. Load time was 159.31 seconds; generation
+  latencies were 11.88 seconds and 6.18 seconds; average throughput was about 3.40
+  tokens/second.
 - Analysis: 6 raw results, 4 successes, 2 failures, generated comparison tables and four plots.
   No local/API break-even appears in the configured request volumes.
 
-This is not yet the final stress-model experiment requested by Exercise 05. It verifies the
-software pipeline, documents the remaining AirLLM dependency blocker, and confirms a CPU
-quantization path for this machine. The final submission should rerun the same workflow with a
-larger model selected for the local hardware.
+| Runner | Load s | Avg latency s | Avg TTFT s | Avg TPOT s/token | Avg tok/s | Avg peak RAM MB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| baseline | 710.51 | 56.60 | 7.15 | 2.23 | 0.45 | 7739.84 |
+| quantized dynamic-int8 | 159.31 | 9.03 | 3.00 | 0.33 | 3.40 | 9570.18 |
+
+### Figures
+
+![Latency comparison](results/figures/latency.png)
+
+![Throughput comparison](results/figures/throughput.png)
+
+![Peak RAM comparison](results/figures/memory.png)
+
+![Cost curve](results/figures/cost_curve.png)
+
+See `docs/REPORT.md` for the full technical analysis: Prefill versus Decode, TTFT/TPOT,
+memory-bound behavior, AirLLM paging, quantization tradeoffs, output quality, and local versus
+API economics.
 
 ## Quality Commands
 
@@ -116,8 +136,8 @@ paths.
   intended stress model once the pipeline is verified.
 - **Disk pressure**: AirLLM shards and Hugging Face caches can be large. Keep cache directories
   outside system-critical locations when needed.
-- **Windows quantization**: `bitsandbytes` support may be limited; failed quantized runs are
-  still saved for analysis.
+- **Windows quantization**: `bitsandbytes` support may be limited. This project defaults to
+  CPU `torch.dynamic_int8` for the observed Windows CPU-only hardware.
 
 ## Expected Hardware Limitations
 
