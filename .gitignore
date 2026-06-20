@@ -1,0 +1,26 @@
+# Course PDFs / private assignment documents
+documents/*.pdf
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Large generated outputs
+results/
+models/
+checkpoints/
+.cache/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+
+# Environment / secrets
+.env
+.env.*
