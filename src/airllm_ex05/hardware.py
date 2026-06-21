@@ -61,12 +61,64 @@ def _gpu_info() -> tuple[str | None, float | None, bool]:
     try:
         import torch
     except ImportError:
-        return None, None, False
+        return _driver_visible_gpu_model(), None, False
     cuda_available = bool(torch.cuda.is_available())
     if not cuda_available:
-        return None, None, False
+        return _driver_visible_gpu_model(), None, False
     props = torch.cuda.get_device_properties(0)
     return props.name, bytes_to_gb(props.total_memory), True
+
+
+def _driver_visible_gpu_model() -> str | None:
+    return _nvidia_smi_gpu_model() or _windows_display_gpu_model()
+
+
+def _nvidia_smi_gpu_model() -> str | None:
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name",
+                "--format=csv,noheader",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    output = result.stdout
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    return lines[0] if lines else None
+
+
+def _windows_display_gpu_model() -> str | None:
+    if platform.system() != "Windows":
+        return None
+    try:
+        output = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                (
+                    "Get-PnpDevice -Class Display | "
+                    "Where-Object { $_.FriendlyName -match 'NVIDIA|GeForce|RTX|GTX|AMD|Radeon' } | "
+                    "Select-Object -First 1 -ExpandProperty FriendlyName"
+                ),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    return lines[0] if lines else None
 
 
 def _storage_info() -> list[dict[str, Any]]:
