@@ -3,81 +3,85 @@
 ## Purpose
 
 Provide an AirLLM execution path for the same model and prompts used by the baseline runner,
-while preserving load and generation failures as structured experiment data.
+while preserving dependency, load, shard, and generation failures as structured experiment
+data.
 
 ## Context
 
-The lecture presents AirLLM as a practical application of virtual memory ideas to LLM
-inference. Instead of loading all model weights into RAM or VRAM, AirLLM moves through model
-layers progressively, often using disk-backed shards. This can make a large model runnable on
-modest hardware but usually increases latency because disk I/O enters the critical path.
+AirLLM is relevant because the lecture presents it as a practical application of virtual
+memory ideas to LLM inference. Instead of requiring all model weights to be resident in RAM or
+VRAM at once, AirLLM can shard and page layers through memory. This can make larger models more
+reachable on constrained machines, but disk I/O and framework overhead can dominate latency.
 
-## Relation to Exercise 05
+## User Story
 
-Exercise 05 requires comparing direct local inference with AirLLM and explaining the
-resource-allocation change. The report must connect AirLLM behavior to paging, virtual memory,
-`mmap`, RAM/VRAM pressure, and latency/throughput tradeoffs.
+As the student, I want to run the same final model through AirLLM so I can compare direct
+inference with a paging-style execution strategy and explain whether AirLLM helped, failed, or
+introduced different bottlenecks on my hardware.
 
 ## Functional Requirements
 
-- Read model name and AirLLM layer-shard path from `configs/experiment.yaml`.
-- Import `airllm` lazily so tests and non-AirLLM commands do not require it.
-- Prefer `airllm.AutoModel` when available, with `AirLLMLlama2` as a fallback.
-- Use the configured `layer_shards_saving_path`.
-- Run the same prompt/run grid as other runners.
-- Return `BenchmarkResult` objects for both successes and failures.
-- Include AirLLM metadata such as layer-shard path or load-stage failure.
+- Read the model name from `ExperimentConfig.model.name`.
+- Read the shard path from `ExperimentConfig.airllm.layer_shards_saving_path`.
+- Import AirLLM lazily.
+- Prefer `airllm.AutoModel` when available.
+- Fall back to `AirLLMLlama2` when needed.
+- Use the same prompt/run grid as the other runners.
+- Save one result per prompt/run.
+- Save load-stage failures for all prompts if model construction fails.
+- Save generation-stage failures for the affected prompt/run if generation fails.
+- Include runner name `airllm`.
+- Include model name.
+- Include prompt and run indices.
+- Include error type and message on failure.
+- Include AirLLM metadata such as shard path and failure stage.
+- Keep AirLLM shards out of Git.
 
 ## Non-Functional Requirements
 
-- AirLLM absence or incompatibility must not crash the whole CLI.
-- The runner must be testable with fake modules.
-- AirLLM caches and shards must remain ignored by Git.
-- The report must clearly distinguish dependency failure, shard-creation success, and measured
-  AirLLM generation performance.
-
-## Inputs and Outputs
-
-Inputs:
-
-- `ExperimentConfig.model.name`
-- `ExperimentConfig.airllm.layer_shards_saving_path`
-- Prompt list, run count, and max new tokens
-- Installed `airllm` package and its transitive dependencies
-
-Outputs:
-
-- `results/raw/airllm_p*_r*.json`
-- `results/raw/airllm_results.csv`
-- Processed comparisons and plots when metrics exist
+- Missing AirLLM must not crash unrelated commands.
+- AirLLM tests must not require downloading a model.
+- AirLLM tests must use fake modules/classes.
+- The CLI must still write results when AirLLM fails.
+- The report must distinguish shard creation from successful generation.
+- Documentation must explain AirLLM through paging, `mmap`, disk I/O, RAM pressure, and latency.
 
 ## Acceptance Criteria
 
-- `uv run airllm-ex05 airllm --config configs/experiment.yaml` writes one result per
-  prompt/run.
-- Missing `airllm`, missing transitive dependencies, or internal AirLLM load failures are saved
-  as failed results with `metadata.stage = "load"`.
-- Successful runs include generated text, latency, derived TPOT, throughput, peak RAM, and
-  peak VRAM when CUDA exists.
+- `uv run airllm-ex05 airllm --config configs/experiment.yaml` writes result files.
+- A missing `airllm` package is saved as structured failed results.
+- An internal AirLLM load failure is saved as structured failed results.
+- A successful fake AirLLM run is covered by tests.
+- Final report includes the observed AirLLM failure rather than omitting the runner.
 
-## Risks and Failure Modes
+## Final Observed Evidence
 
-- Version compatibility between AirLLM, Optimum, and Transformers.
-- AirLLM API changes, for example no compatible `AutoModel` or `AirLLMLlama2`.
-- Model architecture unsupported by installed AirLLM.
-- Layer shard creation fills disk or uses a slow drive.
-- CPU-only execution becomes too slow to complete within a practical timeout.
+- AirLLM imported successfully after dependency work.
+- AirLLM created 76 layer-shard files.
+- The layer-shard files totaled about 6.17 GB.
+- AirLLM then failed with `IndexError: list index out of range`.
+- Both final AirLLM prompt results are failed rows.
+- No AirLLM generation latency, TTFT, TPOT, throughput, or output quality can be claimed.
 
-## Testing Strategy
+## Risks
 
-Unit tests monkeypatch `importlib.import_module` with fake AirLLM classes. Tests verify both
-missing-dependency failure behavior and a successful fake generation path without downloading
-models.
+- AirLLM APIs can change.
+- AirLLM may not support the selected architecture.
+- AirLLM may depend on specific Transformers or Optimum versions.
+- Shard creation may consume significant disk space.
+- Slow disks can make paging impractical.
+- CPU execution or a small laptop GPU can make even successful AirLLM generation too slow.
 
-## Implementation Notes Connected to Code
+## Implementation Notes
 
-- Implemented in `src/airllm_ex05/runners/airllm_runner.py`.
-- Shared success/failure measurement is in `runners/common.py`.
-- Result constants are defined in `constants.py`.
-- Current final run imports AirLLM successfully and creates Qwen2.5-3B layer shards, but fails
-  during AirLLM's internal load path with `IndexError: list index out of range`.
+- Main file: `src/airllm_ex05/runners/airllm_runner.py`
+- Shared helpers: `src/airllm_ex05/runners/common.py`
+- Result models: `src/airllm_ex05/models.py`
+- Persistence: `src/airllm_ex05/benchmark.py`
+- Tests: `tests/test_runners.py`
+
+## Report Requirements
+
+The report must state that AirLLM was attempted, shard creation happened, and generation did
+not happen. It must not compare AirLLM speed against baseline because there are no successful
+AirLLM generation metrics in the final evidence.

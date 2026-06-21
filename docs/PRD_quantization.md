@@ -2,84 +2,78 @@
 
 ## Purpose
 
-Attempt lower-precision model loading and inference so the project can compare memory,
-latency, throughput, and output quality against direct baseline and AirLLM execution.
+Attempt lower-precision inference so the project can compare memory, latency, throughput, and
+output quality against direct baseline and AirLLM execution.
 
 ## Context
 
-The lecture describes quantization as reducing the number of bits used to represent model
-weights. This can reduce RAM/VRAM footprint and memory bandwidth demand, especially during
-Decode. The tradeoff is that lower precision can reduce output quality, and backend support
-is platform-dependent.
-
-## Relation to Exercise 05
-
-Exercise 05 requires adding quantization to the local inference pipeline and analyzing how it
-changes memory, speed, and output quality. The report must identify whether quantization helps
-and where the quality red line appears.
+Quantization reduces the precision of model weights or operations. In local inference this can
+reduce memory footprint and memory bandwidth pressure, especially during decode. The tradeoff
+is backend compatibility and possible output-quality degradation.
 
 ## Functional Requirements
 
-- Read quantization mode, bit width, and compute dtype from config.
-- Support 4-bit and 8-bit settings.
-- Support CPU dynamic-int8 quantization for Windows CPU-only environments.
-- Use `transformers.BitsAndBytesConfig` when configured for `bitsandbytes`.
-- Use `torch.ao.quantization.quantize_dynamic` when configured for `dynamic_int8`.
-- Load tokenizer and model through `AutoTokenizer` and `AutoModelForCausalLM`.
-- Return structured failures when `bitsandbytes`, CUDA, or model support is missing.
-- Include attempted quantization method and bit width in result metadata on success.
+- Read quantization mode from config.
+- Read bit width from config.
+- Read compute dtype from config.
+- Support `bitsandbytes` 4-bit configuration.
+- Support `bitsandbytes` 8-bit configuration.
+- Support CPU `dynamic_int8`.
+- Load tokenizer and model through Transformers.
+- Apply dynamic quantization with `torch.ao.quantization.quantize_dynamic`.
+- Reuse baseline generation where possible.
+- Measure load time, latency, TTFT, TPOT, throughput, RAM, and VRAM where available.
+- Save generated output.
+- Save structured failures when a backend is unavailable.
+- Include quantization metadata in successful results.
 
 ## Non-Functional Requirements
 
-- Tests must not import or require `bitsandbytes`.
-- Quantization failure must not abort the whole benchmark.
-- Windows and CPU-only limitations must be documented explicitly.
-- The report must not claim memory/speed/quality improvements unless result files show them.
-
-## Inputs and Outputs
-
-Inputs:
-
-- `ExperimentConfig.model`
-- `ExperimentConfig.quantization`
-- Prompt list and benchmark settings
-- Installed `transformers`, torch, and optional `bitsandbytes`
-
-Outputs:
-
-- `results/raw/quantized_p*_r*.json`
-- `results/raw/quantized_results.csv`
-- Processed comparison rows and plots when metrics exist
+- Tests must not require `bitsandbytes`.
+- Tests must not download models.
+- Windows and CPU quantization limitations must be documented.
+- The report must not claim universal memory reduction unless evidence shows it.
+- The runner must be able to fail without stopping analysis.
 
 ## Acceptance Criteria
 
 - `uv run airllm-ex05 quantized --config configs/experiment.yaml` writes one result per
   prompt/run.
-- Missing or unsupported `bitsandbytes` produces failed results with clear error messages when
-  that mode is selected.
-- CPU dynamic-int8 runs successfully on the final Qwen2.5-3B experiment.
-- Successful quantized runs include latency, TTFT, TPOT, throughput, RAM, VRAM when available,
-  generated text, and quantization metadata.
+- `bitsandbytes` failures are clear when that mode is selected.
+- CPU dynamic-int8 works for the final local validation.
+- Successful rows include quantization metadata.
+- Final report compares quantized results against baseline.
 
-## Risks and Failure Modes
+## Final Observed Evidence
 
-- Previous observed failure: 4-bit loading required `bitsandbytes>=0.46.1`.
-- `bitsandbytes` support may be limited on Windows or CPU-only systems.
-- Quantized loading may require CUDA even when baseline CPU loading works.
-- Very aggressive quantization may reduce quality.
-- Some model architectures may be incompatible with a chosen quantization path.
+- Final quantization mode: `dynamic_int8`.
+- Both final prompts succeeded.
+- Current processed table shows quantized latency below baseline latency for both prompts.
+- Current processed table shows quantized throughput above baseline throughput for both prompts.
+- Current processed table does not justify a universal memory-reduction claim.
+- Earlier 4-bit `bitsandbytes` path was not suitable for the observed Windows setup.
 
-## Testing Strategy
+## Risks
 
-Tests use fake `transformers`, fake torch, and fake `BitsAndBytesConfig` objects. They verify
-successful fake quantized execution and missing-dependency failure behavior without installing
-`bitsandbytes`.
+- `bitsandbytes` may not support the current OS, Python version, or hardware.
+- CUDA-oriented quantization paths may fail on CPU-only machines.
+- Some models may not support a chosen quantization configuration.
+- Dynamic-int8 can increase load time.
+- Aggressive quantization can harm output quality.
+- Small prompt samples cannot prove broad quality behavior.
 
-## Implementation Notes Connected to Code
+## Implementation Notes
 
-- Implemented in `src/airllm_ex05/runners/quantized_runner.py`.
-- Reuses baseline `_generate()` for text generation.
-- `_quantization_kwargs()` chooses 4-bit or 8-bit `BitsAndBytesConfig` when available, or a
-  dtype fallback if the API is absent.
-- Current final run succeeded for both prompts with `torch.dynamic_int8`, improving average
-  latency and throughput while increasing measured process RSS.
+- Main file: `src/airllm_ex05/runners/quantized_runner.py`
+- Shared generation helper: `src/airllm_ex05/runners/baseline_runner.py`
+- Metrics: `src/airllm_ex05/metrics.py`
+- Tests: `tests/test_runners.py`
+
+## Report Requirements
+
+The report must separate three claims:
+
+- Quantized generation was faster in the final measured run.
+- Dynamic-int8 was the practical Windows CPU backend.
+- The experiment does not prove that every memory or quality metric improves under
+  quantization.

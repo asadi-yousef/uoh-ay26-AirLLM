@@ -81,25 +81,25 @@ Hugging Face login flow.
 ## Final Experiment Summary
 
 The final local experiment uses `Qwen/Qwen2.5-3B-Instruct`, two prompts, one run per prompt,
-and `max_new_tokens: 16` on a CPU-only Windows laptop.
+and `max_new_tokens: 16` on a constrained Windows laptop.
 
-- Hardware: Windows 11, Intel CPU, 4 physical cores, 8 logical cores, 15.70 GiB RAM, no
-  CUDA-visible GPU or VRAM.
-- Baseline: succeeded, but it was slow. Load time was 710.51 seconds; generation latencies were
-  50.33 seconds and 62.87 seconds; average throughput was about 0.45 tokens/second.
+- Hardware: Windows 11, Intel CPU, 4 physical cores, 8 logical cores, 15.70 GiB RAM, NVIDIA
+  GeForce RTX 3050 Laptop GPU, 4.0 GiB VRAM, CUDA available.
+- Baseline: succeeded, but it was slow. Load time was 45.07 seconds; generation latencies were
+  24.37 seconds and 17.67 seconds; average throughput was about 1.27 tokens/second.
 - AirLLM: successfully created 76 layer shard files totaling about 6.17 GB, then failed during
   load with `IndexError: list index out of range`. This is reported as a negative compatibility
   result.
-- Quantized: succeeded with CPU `torch.dynamic_int8`. Load time was 159.31 seconds; generation
-  latencies were 11.88 seconds and 6.18 seconds; average throughput was about 3.40
+- Quantized: succeeded with CPU `torch.dynamic_int8`. Load time was 101.56 seconds; generation
+  latencies were 10.18 seconds and 4.35 seconds; average throughput was about 4.33
   tokens/second.
 - Analysis: 6 raw results, 4 successes, 2 failures, generated comparison tables and four plots.
   No local/API break-even appears in the configured request volumes.
 
 | Runner | Load s | Avg latency s | Avg TTFT s | Avg TPOT s/token | Avg tok/s | Avg peak RAM MB |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| baseline | 710.51 | 56.60 | 7.15 | 2.23 | 0.45 | 7739.84 |
-| quantized dynamic-int8 | 159.31 | 9.03 | 3.00 | 0.33 | 3.40 | 9570.18 |
+| baseline | 45.07 | 21.02 | 4.50 | 0.86 | 1.27 | 4739.68 |
+| quantized dynamic-int8 | 101.56 | 7.27 | 2.91 | 0.28 | 4.33 | 4581.05 |
 
 ### Figures
 
@@ -137,7 +137,7 @@ paths.
 - **Disk pressure**: AirLLM shards and Hugging Face caches can be large. Keep cache directories
   outside system-critical locations when needed.
 - **Windows quantization**: `bitsandbytes` support may be limited. This project defaults to
-  CPU `torch.dynamic_int8` for the observed Windows CPU-only hardware.
+  CPU `torch.dynamic_int8` for the observed Windows hardware.
 
 ## Expected Hardware Limitations
 

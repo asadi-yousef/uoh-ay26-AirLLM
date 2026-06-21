@@ -2,103 +2,256 @@
 
 ## Purpose
 
-Build a reproducible Exercise 05 local-LLM experiment package that documents hardware, runs
-direct baseline inference, attempts AirLLM inference, attempts quantized inference, analyzes
-results, generates plots, and produces a technical report. The project must treat failures as
-first-class results because the assignment explicitly values well-analyzed negative outcomes.
+Build a reproducible Exercise 05 local-LLM experiment package that documents local hardware,
+runs direct baseline inference, attempts AirLLM inference, attempts quantized inference,
+analyzes the resulting evidence, generates plots, compares local and API economics, and
+produces a technical report. The product is not just a one-off notebook. It is an engineering
+submission that can be rerun from a config file and CLI.
 
-## Context
+The project must treat failed runs as first-class results. A missing backend, unsupported
+model architecture, RAM/VRAM limitation, or AirLLM runtime failure is useful evidence when it
+is stored with model, prompt, runner, and hardware context.
 
-Exercise 05 asks students to run a large or uncomfortable LLM locally and explain what happens
-through the lecture concepts of CPU/GPU execution, VRAM, RAM, Prefill, Decode, AirLLM paging,
-quantization, and on-premises economics. The software guidelines require professional
-structure: `uv`, `pyproject.toml`, modular source files, config files, tests, Ruff, Git hygiene,
-and no private PDFs, secrets, model weights, caches, or heavy generated files in commits.
+## Assignment Context
 
-## Relation to Exercise 05
+Exercise 05 asks for a local experiment with a large or uncomfortable LLM. The analysis must
+explain the outcome through the course concepts of CPU/GPU execution, RAM, VRAM, Prefill,
+Decode, TTFT, TPOT/ITL, AirLLM paging, quantization, and on-premises economics.
 
-This project is the experiment harness and documentation system for the assignment. The final
-configured model is `Qwen/Qwen2.5-3B-Instruct`, selected to stress CPU-only inference while
-remaining bounded enough for a short local run.
+The software guidelines require a professional repository:
+
+- `uv` and `pyproject.toml`
+- Modular source code under `src/`
+- Config-driven behavior
+- Tests that do not require private services or large downloads
+- Ruff formatting/linting
+- Documentation and planning files
+- Git hygiene
+- No private PDFs, secrets, model weights, caches, or heavy generated artifacts in commits
+
+## Product Scope
+
+In scope:
+
+- Hardware collection for the local machine.
+- Baseline Hugging Face Transformers inference.
+- AirLLM inference attempt with layer-shard path support.
+- Quantized inference attempt with `bitsandbytes` and CPU dynamic-int8 support.
+- Structured success and failure records.
+- JSON and CSV result serialization.
+- Processed comparison table.
+- Latency, throughput, memory, and cost plots.
+- Cost comparison between local inference and API use.
+- Generated Markdown report plus manual interpretation.
+- README-level evaluator summary.
+- Lightweight automated tests.
+
+Out of scope:
+
+- Training or fine-tuning a model.
+- Building a web UI.
+- Guaranteeing AirLLM compatibility for every model architecture.
+- Guaranteeing exact tokenizer-level metrics for every backend.
+- Committing downloaded model weights or AirLLM shards.
+- Hiding failed experiment paths from the final analysis.
+
+## Users
+
+Primary user:
+
+- The student running the final local experiment and submitting the repo.
+
+Secondary users:
+
+- Course evaluator reviewing the code, docs, and plots.
+- Future student or developer who wants to rerun the harness with a different model.
 
 ## Functional Requirements
 
-- Load all experiment settings from YAML.
-- Collect CPU, core count, RAM, GPU, VRAM, CUDA, OS, Python, and storage data.
-- Run the same prompts and run counts through baseline, AirLLM, and quantized runners.
-- Save one JSON result per prompt/run and one CSV summary per runner.
-- Capture load-stage and generation-stage failures without crashing the whole benchmark.
-- Generate a processed comparison table, analysis JSON, metric plots, cost plot, and report.
-- Keep raw run JSON/CSV files, models, caches, private PDFs, and secrets out of Git.
-- Commit the small final figures and comparison table because the assignment requires visual
-  and tabular evidence in the README.
+### Configuration
+
+- Load all experiment settings from `configs/experiment.yaml`.
+- Validate config with typed models.
+- Resolve paths relative to the repository root.
+- Configure model name, cache path, trust-remote-code flag, and device policy.
+- Configure prompts, run count, warmup count, max new tokens, and timeout value.
+- Configure raw, processed, figure, and report output paths.
+- Configure AirLLM layer-shard path.
+- Configure quantization mode, bit width, and compute dtype.
+- Configure local/API cost assumptions.
+
+### Hardware
+
+- Collect OS and Python version.
+- Collect CPU name where available.
+- Collect physical and logical core counts.
+- Collect total RAM.
+- Detect CUDA availability.
+- Collect GPU name and VRAM when CUDA is available.
+- Record CPU-only state when no GPU is visible.
+- Write `results/raw/hardware.json`.
+
+### Benchmark Runners
+
+- Run every configured prompt and run index for each invoked runner.
+- Save one result JSON per prompt/run.
+- Save one runner-level CSV summary.
+- Measure load time when model loading succeeds.
+- Measure total generation latency.
+- Measure TTFT for streaming Transformers-based paths.
+- Derive TPOT and throughput.
+- Sample peak process RAM during generation.
+- Record CUDA peak VRAM when available.
+- Save generated output sample text.
+- Save structured failures with error type and message.
+- Continue the benchmark when one runner fails.
+
+### Baseline
+
+- Load tokenizer and model through Transformers.
+- Use configured cache directory.
+- Respect `trust_remote_code`.
+- Use streaming generation where possible to measure TTFT.
+- Produce success metrics or structured load/generation failures.
+
+### AirLLM
+
+- Import AirLLM lazily.
+- Use configured layer-shard path.
+- Prefer `airllm.AutoModel` when available.
+- Fall back to `AirLLMLlama2` when needed.
+- Preserve AirLLM dependency and runtime failures as results.
+- Document shard creation separately from successful generation.
+
+### Quantization
+
+- Support `bitsandbytes` 4-bit and 8-bit configuration.
+- Support CPU `torch.dynamic_int8` for Windows CPU validation.
+- Preserve missing backend errors as structured failures.
+- Include quantization method metadata in successful results.
+- Compare memory, speed, and output quality against baseline.
+
+### Analysis And Report
+
+- Load all benchmark result JSON files.
+- Ignore `hardware.json` when loading benchmark results.
+- Write `results/processed/comparison_table.csv`.
+- Write `results/processed/analysis.json`.
+- Generate latency, throughput, memory, and cost plots.
+- Generate `docs/REPORT.md`.
+- Preserve failed rows in processed evidence.
+- Make README summarize the final result and link to the full report.
 
 ## Non-Functional Requirements
 
-- The code must run tests without downloading models.
-- Heavy model dependencies must be optional or lazily imported.
-- Paths must be config-driven and resolved relative to the project root.
-- CLI commands must be simple and reproducible through `uv run`.
-- Result files must be serializable, inspectable, and stable enough for report generation.
+- Tests must run without downloading models.
+- Heavy ML dependencies must be optional or lazy-imported.
+- CLI commands must be reproducible with `uv run`.
+- Result files must be human-inspectable.
+- The code must be modular and easy to review.
 - Ruff and pytest must pass before submission.
+- The final repo must avoid private or oversized artifacts.
+- Documentation must be explicit about limitations and negative results.
 
-## Inputs and Outputs
+## Final Configured Experiment
 
-Inputs:
+The final bounded stress experiment is configured as:
+
+- Model: `Qwen/Qwen2.5-3B-Instruct`
+- Prompts: two conceptual prompts about Prefill/Decode and paging
+- Runs: one per prompt
+- Output length: 16 max new tokens
+- Hardware: Windows 11 laptop with 15.70 GiB RAM and an RTX 3050 Laptop GPU visible to CUDA
+- Quantization: CPU dynamic-int8
+- AirLLM cache: `airllm_cache/layer_shards`
+
+This model was selected because it is large enough to be slow and uncomfortable on the target
+machine while remaining bounded enough to complete a short experiment.
+
+## Inputs
 
 - `configs/experiment.yaml`
-- Local Python environment and optional ML dependencies
-- Hugging Face model cache and AirLLM cache paths
-- Prompt list and benchmark settings
-- Cost-analysis assumptions
+- Local Python environment
+- Optional model dependencies from `uv sync --extra models`
+- Hugging Face cache
+- AirLLM layer-shard directory
+- Prompt list
+- Cost assumptions
 
-Outputs:
+## Outputs
 
 - `results/raw/hardware.json`
-- `results/raw/*_p*_r*.json`
+- `results/raw/baseline_p*_r*.json`
+- `results/raw/airllm_p*_r*.json`
+- `results/raw/quantized_p*_r*.json`
 - `results/raw/*_results.csv`
-- `results/processed/analysis.json` as ignored local analysis metadata
-- `results/processed/comparison_table.csv` as committed final comparison evidence
-- `results/figures/*.png` as committed final visual evidence
+- `results/processed/analysis.json`
+- `results/processed/comparison_table.csv`
+- `results/figures/latency.png`
+- `results/figures/throughput.png`
+- `results/figures/memory.png`
+- `results/figures/cost_curve.png`
 - `docs/REPORT.md`
 
 ## Acceptance Criteria
 
 - `uv run airllm-ex05 hardware` writes hardware JSON.
-- `uv run airllm-ex05 baseline --config configs/experiment.yaml` writes success or failure
-  records for every prompt/run.
-- `uv run airllm-ex05 airllm --config configs/experiment.yaml` writes success or failure
-  records for every prompt/run.
-- `uv run airllm-ex05 quantized --config configs/experiment.yaml` writes success or failure
-  records for every prompt/run.
-- `uv run airllm-ex05 analyze --config configs/experiment.yaml` writes processed tables and
+- `uv run airllm-ex05 baseline --config configs/experiment.yaml` writes one result per
+  prompt/run.
+- `uv run airllm-ex05 airllm --config configs/experiment.yaml` writes one result per
+  prompt/run, even when AirLLM fails.
+- `uv run airllm-ex05 quantized --config configs/experiment.yaml` writes one result per
+  prompt/run.
+- `uv run airllm-ex05 analyze --config configs/experiment.yaml` writes processed outputs and
   plots where data exists.
-- `uv run airllm-ex05 report --config configs/experiment.yaml` writes a report that can be
-  manually expanded with qualitative analysis.
-- `uv run ruff check .` and `uv run pytest` pass.
+- `uv run airllm-ex05 report --config configs/experiment.yaml` writes the report.
+- Failed runs are not silently dropped.
+- README includes final metrics and figures.
+- `uv run ruff check .` passes.
+- `uv run pytest` passes.
 
-## Risks and Failure Modes
+## Final Evidence To Preserve
 
-- A future model change may be too small to satisfy the assignment's stress requirement.
-- Large model download or AirLLM shard creation may require substantial disk space.
-- CPU-only Windows may not support common 4-bit `bitsandbytes` paths.
-- AirLLM may be incompatible with current package versions or model architecture.
-- Python 3.13 may be newer than some ML packages support.
-- AirLLM may shard successfully but still fail before generation, as observed on Qwen2.5-3B.
+- Hardware: Windows 11, 4 physical cores, 8 logical cores, 15.70 GiB RAM, NVIDIA GeForce
+  RTX 3050 Laptop GPU, 4.0 GiB VRAM, CUDA available.
+- Baseline: succeeded on both final prompts but slowly.
+- AirLLM: imported and created 76 layer-shard files totaling about 6.17 GB, then failed with
+  `IndexError: list index out of range`.
+- Quantized: succeeded on both prompts with CPU dynamic-int8.
+- Analysis: 6 raw results, 4 successes, 2 failures.
+- Cost model: no break-even within configured monthly request volumes.
+
+## Risks
+
+- AirLLM compatibility can vary by version and model architecture.
+- CPU inference can be too slow for larger models, and a 4 GiB laptop GPU is still too small
+  for comfortable large-model experimentation.
+- `bitsandbytes` may not work on Windows or CPU-only machines.
+- Python 3.12 was used for the final hardware snapshot; Python 3.13 may be ahead of some ML
+  package support if the project is run elsewhere.
+- Approximate token counts can differ from tokenizer-true counts.
+- RAM sampling can miss short spikes.
+- Cost assumptions are illustrative rather than measured from wall power.
 
 ## Testing Strategy
 
-Tests use fakes and temporary directories. They cover config loading, path resolution,
-hardware schema, metrics, result serialization, cost calculations, report generation, CLI
-smoke paths, and runner success/failure behavior with mocked heavy dependencies.
+Tests use fake dependencies and temporary directories. They cover config loading, path
+resolution, hardware data models, metrics, result serialization, cost calculations, report
+generation, CLI smoke paths, and runner success/failure behavior with mocked heavy packages.
 
-## Implementation Notes
+## Module Map
 
-- `src/airllm_ex05/cli.py` owns the command surface.
-- `config.py` defines Pydantic config models and path resolution.
-- `models.py` defines benchmark and hardware data contracts.
-- `benchmark.py` writes/loads raw result JSON and CSV summaries.
-- `hardware.py` collects environment data with `psutil`, platform APIs, and optional torch.
-- `runners/` contains baseline, AirLLM, and quantized execution paths.
-- `report.py`, `plotting.py`, and `cost_analysis.py` create processed outputs and economics.
-- `shared/` holds path, validation, and logging helpers.
+- `cli.py`: command routing.
+- `config.py`: config models and path resolution.
+- `models.py`: hardware, metric, and benchmark contracts.
+- `benchmark.py`: JSON/CSV result persistence.
+- `hardware.py`: local hardware snapshot.
+- `metrics.py`: token estimates, throughput, TPOT, RAM, and VRAM helpers.
+- `runners/common.py`: shared prompt iteration and structured failure handling.
+- `runners/baseline_runner.py`: direct Transformers path.
+- `runners/airllm_runner.py`: AirLLM path.
+- `runners/quantized_runner.py`: quantized path.
+- `cost_analysis.py`: API/local economics.
+- `plotting.py`: figures.
+- `report.py`: report generation.
+- `shared/`: logging, path, and validation helpers.
