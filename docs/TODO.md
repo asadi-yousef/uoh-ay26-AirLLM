@@ -80,6 +80,11 @@ as planned evidence, not removed from the record.
 - [x] Create `docs/PRD_benchmarking.md`.
 - [x] Create `docs/PRD_quantization.md`.
 - [x] Create `docs/REPORT.md`.
+- [x] Create `docs/ARCHITECTURE.md`.
+- [x] Create `docs/PROMPTS.md`.
+- [x] Create `.env.example`.
+- [x] Create `LICENSE` for implementation code.
+- [x] Create `docs/screenshots/` for evaluator-facing screenshots.
 - [x] Create `docs/TODO.md`.
 - [x] Keep the README as the first evaluator-facing entry point.
 - [x] Describe project structure in the README.
@@ -100,6 +105,8 @@ as planned evidence, not removed from the record.
 - [x] Expand docs after implementation so they represent what was actually planned and done.
 - [ ] Do a final human read-through of every Markdown document.
 - [ ] Confirm links and image paths render correctly on GitHub.
+- [ ] Add final screenshots under `docs/screenshots/` and reference them from README if the
+      evaluator expects screenshots.
 
 ## 4. Configuration System
 
@@ -437,21 +444,21 @@ as planned evidence, not removed from the record.
 
 ## 19. Final Submission Checklist
 
-- [ ] `README.md` explains the project and final result.
-- [ ] `docs/PRD.md` is expanded.
-- [ ] `docs/PLAN.md` is expanded.
-- [ ] `docs/TODO.md` is expanded.
-- [ ] `docs/REPORT.md` contains final technical conclusions.
-- [ ] Specialized PRDs contain sufficient detail.
-- [ ] `configs/experiment.yaml` points to the final stress experiment.
-- [ ] Source code remains modular.
-- [ ] Tests remain lightweight.
-- [ ] Ruff passes.
-- [ ] Pytest passes.
-- [ ] Final figures render.
-- [ ] Final comparison table is present.
-- [ ] Heavy artifacts remain ignored.
-- [ ] Private PDFs remain ignored.
+- [x] `README.md` explains the project and final result.
+- [x] `docs/PRD.md` is expanded.
+- [x] `docs/PLAN.md` is expanded.
+- [x] `docs/TODO.md` is expanded.
+- [x] `docs/REPORT.md` contains final technical conclusions.
+- [x] Specialized PRDs contain sufficient detail.
+- [x] `configs/experiment.yaml` points to the final stress experiment.
+- [x] Source code remains modular.
+- [x] Tests remain lightweight.
+- [x] Ruff passes.
+- [x] Pytest passes.
+- [x] Final figures render.
+- [x] Final comparison table is present.
+- [x] Heavy artifacts remain ignored.
+- [x] Private PDFs remain ignored.
 - [ ] Git status contains only intended changes.
 
 ## 20. File-Level Implementation Trace
