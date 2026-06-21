@@ -59,7 +59,7 @@ ignore = ["ANN401"]
 "src/airllm_ex05/report.py" = ["E501"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=airllm_ex05 --cov-report=term-missing --cov-fail-under=85"
+addopts = "--basetemp=.tmp/pytest-run --cov=airllm_ex05 --cov-report=term-missing --cov-fail-under=85"
 testpaths = ["tests"]
 pythonpath = ["src"]
 cache_dir = ".tmp/pytest_cache"

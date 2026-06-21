@@ -100,7 +100,14 @@ def _fake_import(name: str) -> object:
     raise ImportError(msg)
 
 
-def test_baseline_missing_transformers_returns_failures() -> None:
+def _missing_transformers_import(name: str) -> object:
+    if name in {"transformers", "torch"}:
+        raise ImportError(name)
+    return _fake_import(name)
+
+
+def test_baseline_missing_transformers_returns_failures(monkeypatch) -> None:
+    monkeypatch.setattr("importlib.import_module", _missing_transformers_import)
     config = load_config("configs/experiment.yaml")
     results = run_baseline(config)
 
@@ -138,7 +145,8 @@ def test_airllm_success_with_fakes(monkeypatch) -> None:
     assert "layer_shards" in results[0].metadata
 
 
-def test_quantized_missing_transformers_returns_failures() -> None:
+def test_quantized_missing_transformers_returns_failures(monkeypatch) -> None:
+    monkeypatch.setattr("importlib.import_module", _missing_transformers_import)
     config = load_config("configs/experiment.yaml")
     results = run_quantized(config)
 
