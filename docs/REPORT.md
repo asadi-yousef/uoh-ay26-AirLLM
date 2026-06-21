@@ -262,6 +262,7 @@ The project satisfies the assignment as an engineering experiment:
 - It generates plots and cost analysis.
 - It includes tests and reproducible CLI commands.
 
-The core technical finding is that direct CPU inference with Qwen2.5-3B is possible but slow,
-AirLLM can fail despite successful shard creation, and CPU dynamic-int8 quantization provides a
-practical speed improvement for this bounded local run.
+The core technical finding is that direct local Transformers inference with Qwen2.5-3B is
+possible but slow on this constrained laptop, AirLLM can fail despite successful shard
+creation, and CPU dynamic-int8 quantization provides a practical speed improvement for this
+bounded local run.
