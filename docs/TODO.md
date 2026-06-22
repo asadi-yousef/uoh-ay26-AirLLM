@@ -139,8 +139,9 @@ as planned evidence, not removed from the record.
 - [x] Set final max new tokens to 16.
 - [x] Set final run count to 1.
 - [x] Set final AirLLM shard path to `airllm_cache/qwen2_5_7b/layer_shards`.
-- [x] Set final quantization mode to `dynamic_int8`.
-- [x] Preserve `bitsandbytes` settings for CUDA-capable environments.
+- [x] Set final quantization mode to `bitsandbytes`.
+- [x] Use 8-bit bitsandbytes with fp32 CPU offload for the final 7B run.
+- [x] Preserve `dynamic_int8` for smaller CPU validation models.
 
 ## 5. Hardware Collection
 
@@ -273,9 +274,10 @@ as planned evidence, not removed from the record.
 - [x] Run final AirLLM command on Qwen2.5-7B.
 - [x] Resolve dependency issues far enough for AirLLM to import.
 - [x] Confirm AirLLM created layer shards.
-- [x] Record final AirLLM internal failure.
-- [x] Preserve `AttributeError: 'str' object has no attribute 'shape'` in raw results.
-- [x] Treat the AirLLM result as a negative compatibility finding.
+- [x] Diagnose the AirLLM raw-string generation failure.
+- [x] Fix AirLLM by tokenizing prompts before generation.
+- [x] Pin Transformers to a compatible version for the AirLLM/Qwen2 stack.
+- [x] Record final AirLLM successful generation rows.
 - [x] Explain AirLLM through paging and disk I/O in report docs.
 
 ## 11. Quantized Runner
@@ -291,17 +293,15 @@ as planned evidence, not removed from the record.
 - [x] Reuse the baseline generation helper.
 - [x] Include quantization metadata in results.
 - [x] Capture missing `bitsandbytes` as structured failure.
-- [x] Document previous 4-bit failure on the observed Windows hardware.
-- [x] Switch final config to CPU dynamic-int8.
-- [x] Run final dynamic-int8 quantized benchmark.
-- [x] Record two structured quantized failure results for the final 7B run.
-- [x] Record quantized prompt 0 load-stage `MemoryError`.
-- [x] Record quantized prompt 1 load-stage `MemoryError`.
-- [x] Document that quantized latency is unavailable for the final 7B run.
-- [x] Document that quantized throughput is unavailable for the final 7B run.
-- [x] Document that quantized RAM/VRAM generation metrics are unavailable for the final 7B run.
-- [x] Document that quantized output quality is unavailable because generation did not start.
-- [x] Document that dynamic-int8 was stopped by the memory guard on the final 7B run.
+- [x] Document the previous dynamic-int8 7B RAM-pressure failure.
+- [x] Switch final config to bitsandbytes 8-bit with CPU offload.
+- [x] Run final bitsandbytes quantized benchmark.
+- [x] Record two successful quantized results for the final 7B run.
+- [x] Document quantized latency for the final 7B run.
+- [x] Document quantized throughput for the final 7B run.
+- [x] Document quantized RAM/VRAM generation metrics for the final 7B run.
+- [x] Document quantized output quality smoke-check evidence.
+- [x] Keep the dynamic-int8 memory guard for smaller CPU validation and oversized conversions.
 
 ## 12. CLI
 
@@ -370,12 +370,12 @@ as planned evidence, not removed from the record.
 - [x] Generate report.
 - [x] Generate README plots.
 - [x] Record final comparison CSV.
-- [x] Record AirLLM failures as raw JSON.
+- [x] Record AirLLM successes as raw JSON.
 - [x] Record baseline successes as raw JSON.
-- [x] Record quantized failures as raw JSON.
+- [x] Record quantized successes as raw JSON.
 - [x] Record final baseline load time from processed evidence.
-- [x] Record final quantized load-stage failure from processed evidence.
-- [x] Record final AirLLM error from raw evidence.
+- [x] Record final quantized performance from processed evidence.
+- [x] Record final AirLLM performance from raw evidence.
 - [x] Record final cost-analysis output.
 - [x] Preserve the fact that raw evidence changed between runs if regenerated.
 - [ ] Before submission, rerun all commands only if the evaluator requires fresh raw outputs.
@@ -417,29 +417,29 @@ as planned evidence, not removed from the record.
 - [x] Confirm all final numeric values in README match `results/processed/comparison_table.csv`.
 - [x] Confirm all final numeric values in `docs/REPORT.md` match current raw/processed files.
 - [x] Confirm AirLLM shard count and size are documented as observed local evidence.
-- [x] Confirm no claim says AirLLM generated text in the final run.
-- [x] Confirm no claim says dynamic-int8 reduced RAM or improved speed in the final 7B run.
+- [x] Confirm AirLLM generated text claims match the final successful run.
+- [x] Confirm quantized speed claims are tied to bitsandbytes 8-bit evidence, not dynamic-int8.
 - [ ] Confirm output quality observations are based on actual generated text.
 - [ ] Confirm cost conclusions are tied to configured assumptions.
-- [ ] Confirm every negative result is described as observed evidence, not speculation.
+- [ ] Confirm historical negative attempts are described as fixed or superseded, not final
+      evidence.
 - [ ] Confirm all planned assignment terms are discussed in the final report.
 - [ ] Confirm the README is enough for a fast evaluator scan.
 
 ## 18. Known Limitations
 
 - [x] Token counting is approximate rather than tokenizer-exact.
-- [x] AirLLM TTFT is unavailable because AirLLM failed before generation.
+- [x] AirLLM TTFT is unavailable because AirLLM does not expose the same streaming callback path.
 - [x] Peak RAM sampling can miss short-lived memory spikes.
-- [x] CUDA VRAM metrics are available for paths that use CUDA; final dynamic-int8 rows have no
-      VRAM metric because generation did not start.
-- [x] `bitsandbytes` was not the final quantization backend on Windows.
-- [x] CPU dynamic-int8 was implemented but did not complete for the final 7B run.
+- [x] CUDA VRAM metrics are available for paths that use CUDA/offload.
+- [x] `bitsandbytes` is the final quantization backend for the 7B run.
+- [x] CPU dynamic-int8 is implemented but reserved for smaller CPU validation models.
 - [x] Python 3.12 was used for the final model run; Python 3.13 may not be ideal for every ML
       package even though tooling can run.
 - [x] The final experiment is intentionally bounded and short to complete on local hardware.
 - [x] Cost analysis uses assumptions rather than measured wall-plug power.
 - [x] Output quality review is manual and small-sample.
-- [x] AirLLM incompatibility may be version-specific.
+- [x] AirLLM compatibility is version-sensitive; the current lock uses Transformers 4.45.x.
 
 ## 19. Final Submission Checklist
 
@@ -509,26 +509,26 @@ as planned evidence, not removed from the record.
 - [x] Preserve `runner=airllm` rows.
 - [x] Preserve `runner=quantized` rows.
 - [x] Preserve `status=success` rows.
-- [x] Preserve `status=failed` rows.
+- [x] Preserve `status=failed` rows when a future run fails.
 - [x] Preserve `model_name=Qwen/Qwen2.5-7B-Instruct` in final result files.
 - [x] Preserve prompt index 0.
 - [x] Preserve prompt index 1.
 - [x] Preserve run index 0.
-- [x] Preserve AirLLM `AttributeError`.
-- [x] Preserve AirLLM `'str' object has no attribute 'shape'` message.
+- [x] Preserve the AirLLM raw-string failure as historical diagnosis in docs.
+- [x] Preserve final AirLLM success metrics.
 - [x] Preserve baseline load-time metric.
 - [x] Preserve baseline latency metrics.
 - [x] Preserve baseline TTFT metrics.
 - [x] Preserve baseline TPOT metrics.
 - [x] Preserve baseline throughput metrics.
 - [x] Preserve baseline RAM metrics.
-- [x] Preserve quantized `MemoryError` failure rows.
-- [x] Preserve quantized load-stage metadata.
-- [x] Preserve quantized unavailable latency metrics as empty values.
-- [x] Preserve quantized unavailable TTFT metrics as empty values.
-- [x] Preserve quantized unavailable TPOT metrics as empty values.
-- [x] Preserve quantized unavailable throughput metrics as empty values.
-- [x] Preserve quantized unavailable RAM metrics as empty values.
+- [x] Preserve final quantized success rows.
+- [x] Preserve quantized bitsandbytes metadata.
+- [x] Preserve quantized latency metrics.
+- [x] Preserve quantized TTFT metrics.
+- [x] Preserve quantized TPOT metrics.
+- [x] Preserve quantized throughput metrics.
+- [x] Preserve quantized RAM metrics.
 - [x] Preserve `break_even_monthly_requests: null`.
 - [x] Preserve cost points for 100 requests.
 - [x] Preserve cost points for 1000 requests.
@@ -540,9 +540,9 @@ as planned evidence, not removed from the record.
 - [x] Confirm `docs/PLAN.md` and `docs/PRD.md` agree on architecture.
 - [x] Confirm `docs/PRD_airllm_pipeline.md` and `docs/REPORT.md` agree on AirLLM status.
 - [x] Confirm `docs/PRD_benchmarking.md` and `docs/REPORT.md` agree on result counts.
-- [x] Confirm `docs/PRD_quantization.md` and `docs/REPORT.md` agree on dynamic-int8 claims.
+- [x] Confirm `docs/PRD_quantization.md` and `docs/REPORT.md` agree on bitsandbytes claims.
 - [ ] Confirm `docs/TODO.md` does not mark human review as completed prematurely.
-- [x] Confirm `README.md` and `docs/REPORT.md` both explain negative results.
+- [x] Confirm `README.md` and `docs/REPORT.md` both explain the successful final run.
 - [x] Confirm all generated figures are referenced from at least one doc.
 - [x] Confirm all CLI commands are shown with `uv run`.
 - [x] Confirm all paths use repository-relative examples.

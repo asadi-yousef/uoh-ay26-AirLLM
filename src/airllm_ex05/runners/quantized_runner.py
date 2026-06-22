@@ -91,7 +91,12 @@ def _quantization_kwargs(config: ExperimentConfig, transformers: Any, torch: Any
         }
     if config.quantization.bits == 4:
         return {"quantization_config": transformers.BitsAndBytesConfig(load_in_4bit=True)}
-    return {"quantization_config": transformers.BitsAndBytesConfig(load_in_8bit=True)}
+    return {
+        "quantization_config": transformers.BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_enable_fp32_cpu_offload=True,
+        )
+    }
 
 
 def _torch_dtype(config: ExperimentConfig, torch: Any) -> Any:

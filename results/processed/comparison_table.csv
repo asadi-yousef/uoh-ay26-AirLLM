@@ -1,7 +1,7 @@
 error_message,error_type,input_tokens,load_time_seconds,model_name,output_tokens,peak_ram_mb,peak_vram_mb,prompt_index,run_index,runner,status,time_per_output_token_seconds,time_to_first_token_seconds,tokens_per_second,total_latency_seconds
-'str' object has no attribute 'shape',AttributeError,,,Qwen/Qwen2.5-7B-Instruct,,,,0,0,airllm,failed,,,,
-'str' object has no attribute 'shape',AttributeError,,,Qwen/Qwen2.5-7B-Instruct,,,,1,0,airllm,failed,,,,
-,,11,353.1248332,Qwen/Qwen2.5-7B-Instruct,22,5754.13,4023.98,0,0,baseline,success,10.305232027272723,17.022104100000206,0.0970380868042085,226.7151045999999
-,,14,353.1248332,Qwen/Qwen2.5-7B-Instruct,30,5707.85,4024.15,1,0,baseline,success,7.644340743333335,15.128969000000097,0.13081572807597627,229.33022230000006
-"dynamic_int8 quantization would likely exceed local RAM before results can be serialized: cached checkpoint is 14.2 GiB, physical RAM is 15.7 GiB, estimated requirement is 31.9 GiB. Use a smaller model, a native low-bit backend such as bitsandbytes on a supported CUDA/Linux environment, or preserve this structured failure as the 7B quantized result.",MemoryError,,,Qwen/Qwen2.5-7B-Instruct,,,,0,0,quantized,failed,,,,
-"dynamic_int8 quantization would likely exceed local RAM before results can be serialized: cached checkpoint is 14.2 GiB, physical RAM is 15.7 GiB, estimated requirement is 31.9 GiB. Use a smaller model, a native low-bit backend such as bitsandbytes on a supported CUDA/Linux environment, or preserve this structured failure as the 7B quantized result.",MemoryError,,,Qwen/Qwen2.5-7B-Instruct,,,,1,0,quantized,failed,,,,
+,,11,4.30974040000001,Qwen/Qwen2.5-7B-Instruct,22,6373.56,1094.48,0,0,airllm,success,20.30402514090904,,0.04925131805442734,446.6885530999989
+,,14,4.30974040000001,Qwen/Qwen2.5-7B-Instruct,30,3943.98,1099.13,1,0,airllm,success,14.797047770000002,,0.06758104829717664,443.91143310000007
+,,11,16.64037029999963,Qwen/Qwen2.5-7B-Instruct,22,6564.54,4023.98,0,0,baseline,success,9.838558386363646,16.640560699999696,0.10164090720709767,216.44828450000023
+,,14,16.64037029999963,Qwen/Qwen2.5-7B-Instruct,30,5694.49,4024.15,1,0,baseline,success,7.008784019999984,13.411492799999905,0.1426781018143005,210.26352059999954
+,,11,54.81843299999855,Qwen/Qwen2.5-7B-Instruct,22,9528.06,8317.12,0,0,quantized,success,5.095041581818143,32.37352020000071,0.1962692519661742,112.09091479999915
+,,14,54.81843299999855,Qwen/Qwen2.5-7B-Instruct,30,8028.14,8317.29,1,0,quantized,success,2.490958110000004,6.617104999999356,0.40145195376248144,74.72874330000013

@@ -3,9 +3,8 @@
 ## Purpose
 
 Attempt lower-precision inference so the project can compare memory, latency, throughput, and
-output quality against direct baseline and AirLLM execution when generation succeeds, and so it
-can preserve a structured failure when the selected model/backend/hardware combination is too
-large.
+output quality against direct baseline and AirLLM execution when generation succeeds, while still
+preserving structured failures for backend or memory-limited configurations.
 
 ## Context
 
@@ -50,23 +49,20 @@ is backend compatibility and possible output-quality degradation.
 - Successful rows include quantization metadata when generation succeeds.
 - Failure rows include `stage=load` when loading or conversion is stopped before generation.
 - Final report compares quantized results against baseline only for metrics that exist.
-- Final report explicitly says when quantized latency, throughput, and quality are unavailable.
+- Final report includes quantized latency, throughput, memory, and quality notes when generation
+  succeeds.
 
 ## Final Observed Evidence
 
-- Final quantization mode: `dynamic_int8`.
-- Both final quantized prompt rows failed before generation.
-- Error type: `MemoryError`.
-- Error message records that dynamic-int8 quantization would likely exceed local RAM before
-  results can be serialized.
-- Cached checkpoint estimate in the failure message: about 14.2 GiB.
-- Physical RAM estimate in the failure message: about 15.7 GiB.
-- Estimated dynamic-int8 conversion requirement: about 31.9 GiB.
-- Current processed table has no quantized latency, TTFT, TPOT, throughput, RAM, VRAM, or output
-  quality metrics for the 7B run.
-- Current processed table supports the claim that the quantized runner is robust and auditable,
-  not that final 7B quantized inference succeeded on this laptop.
-- Earlier 4-bit `bitsandbytes` path was not suitable for the observed Windows setup.
+- Final quantization mode: `bitsandbytes`.
+- Final quantization bits: 8.
+- CPU offload is enabled through `llm_int8_enable_fp32_cpu_offload=True`.
+- Both final quantized prompt rows succeeded.
+- Quantized latency, TTFT, TPOT, throughput, RAM, VRAM, and output quality smoke-check evidence
+  are available for the 7B run.
+- CPU `dynamic_int8` remains implemented and tested for smaller CPU validation models.
+- The previous 7B dynamic-int8 attempt was rejected because conversion was likely to exceed the
+  observed 15.7 GiB RAM budget.
 
 ## Risks
 
@@ -91,8 +87,8 @@ is backend compatibility and possible output-quality degradation.
 The report must separate these claims:
 
 - Quantized runner implementation exists and is tested.
-- Dynamic-int8 is the configured Windows CPU backend.
-- Final 7B dynamic-int8 inference did not succeed on the observed laptop.
-- The failure is structured evidence caused by estimated memory pressure, not a missing run.
-- The experiment cannot claim quantized 7B speed, memory, or quality improvements for the final
-  evidence.
+- bitsandbytes 8-bit with CPU offload is the configured final 7B backend.
+- Dynamic-int8 remains available for smaller CPU validation models.
+- Final 7B bitsandbytes inference succeeded on the observed laptop.
+- The final evidence can compare quantized speed, memory, and output quality smoke checks against
+  baseline and AirLLM.

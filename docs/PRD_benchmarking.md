@@ -80,29 +80,30 @@ Metrics store:
 - Successful rows include latency and token-derived metrics.
 - Failed rows leave unavailable metrics empty rather than fabricating values.
 - Analysis can process failed and successful rows together.
-- The final comparison table includes AirLLM and quantized failed rows.
+- The final comparison table includes baseline, AirLLM, and quantized rows, whether they succeed
+  or fail.
 
 ## Final Evidence
 
 Current processed evidence contains:
 
 - 6 raw benchmark rows.
-- 2 successful rows.
-- 4 failed rows.
+- 6 successful rows.
+- 0 failed rows.
 - 2 baseline successes.
-- 2 AirLLM failures.
-- 2 quantized dynamic-int8 `MemoryError` failures.
+- 2 AirLLM successes.
+- 2 quantized bitsandbytes 8-bit successes.
 
 ## Risks
 
 - Approximate token counting can differ from true tokenizer counts.
 - RAM sampling can miss short peaks.
 - TTFT is only available for streaming paths.
-- AirLLM metrics are unavailable if AirLLM fails before generation.
-- Quantized metrics are unavailable if the dynamic-int8 memory guard stops before generation.
+- AirLLM TTFT is unavailable because it does not currently use the streaming callback path.
+- Quantized metrics are unavailable if a backend load failure or dynamic-int8 memory guard stops
+  before generation.
 - CPU-only machines cannot provide real CUDA/VRAM measurements; this final run did have a
-  CUDA-visible 4.0 GiB laptop GPU, while the final dynamic-int8 quantized path failed before
-  generation.
+  CUDA-visible 4.0 GiB laptop GPU, while the final bitsandbytes path used CPU offload.
 - Very slow local generation can make large repeated experiments impractical.
 
 ## Implementation Notes

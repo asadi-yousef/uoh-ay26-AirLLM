@@ -52,16 +52,20 @@ introduced different bottlenecks on my hardware.
 - A missing `airllm` package is saved as structured failed results.
 - An internal AirLLM load failure is saved as structured failed results.
 - A successful fake AirLLM run is covered by tests.
-- Final report includes the observed AirLLM failure rather than omitting the runner.
+- Final report includes the observed AirLLM latency and throughput rather than omitting the
+  runner.
 
 ## Final Observed Evidence
 
 - AirLLM imported successfully after dependency work.
 - AirLLM imported successfully for the configured 7B model.
-- AirLLM then failed before generation with
-  `AttributeError: 'str' object has no attribute 'shape'`.
-- Both final AirLLM prompt results are failed rows.
-- No AirLLM generation latency, TTFT, TPOT, throughput, or output quality can be claimed.
+- The earlier raw-string generation failure was fixed by tokenizing prompts before calling
+  `model.generate`.
+- Transformers was pinned to the compatible 4.45.x series for this AirLLM/Qwen2 stack.
+- Both final AirLLM prompt results are successful rows.
+- AirLLM latency, TPOT, throughput, RAM, VRAM, and generated output are available.
+- AirLLM TTFT remains unavailable because this path does not expose the same streaming callback
+  used by the Transformers baseline and quantized runners.
 
 ## Risks
 
@@ -82,6 +86,6 @@ introduced different bottlenecks on my hardware.
 
 ## Report Requirements
 
-The report must state that AirLLM was attempted and generation did not happen. It must not
-compare AirLLM speed against baseline because there are no successful AirLLM generation metrics
-in the final evidence.
+The report must state that AirLLM succeeded, but was the slowest successful generation path in
+the final evidence. It should compare latency and throughput against baseline and quantized rows,
+while keeping TTFT unavailable for AirLLM.

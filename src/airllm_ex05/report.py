@@ -6,7 +6,7 @@ from pathlib import Path
 from airllm_ex05.benchmark import load_results, save_results_csv
 from airllm_ex05.config import ExperimentConfig
 from airllm_ex05.cost_analysis import break_even_request_count, build_cost_curve
-from airllm_ex05.plotting import plot_cost_curve, plot_metric
+from airllm_ex05.plotting import plot_cost_curve, plot_metric, plot_runner_outcomes
 
 
 def analyze_results(config: ExperimentConfig) -> Path:
@@ -55,6 +55,7 @@ def _analysis_defaults(results: list) -> tuple[int, int, float]:
 
 def _create_figures(config: ExperimentConfig, results: list, cost_points: list) -> list[Path | None]:
     return [
+        plot_runner_outcomes(results, config.outputs.figures_dir / "outcomes.png"),
         plot_metric(results, "total_latency_seconds", config.outputs.figures_dir / "latency.png"),
         plot_metric(results, "tokens_per_second", config.outputs.figures_dir / "throughput.png"),
         plot_metric(results, "peak_ram_mb", config.outputs.figures_dir / "memory.png"),
@@ -63,7 +64,6 @@ def _create_figures(config: ExperimentConfig, results: list, cost_points: list) 
 
 
 def _report_body(config: ExperimentConfig, analysis: dict, results: list) -> str:
-    failures = [result for result in results if result.status == "failed"]
     baseline = [result for result in results if result.runner == "baseline"]
     airllm = [result for result in results if result.runner == "airllm"]
     quantized = [result for result in results if result.runner == "quantized"]
@@ -72,8 +72,9 @@ def _report_body(config: ExperimentConfig, analysis: dict, results: list) -> str
 ## Executive Summary
 
 This report documents a reproducible local LLM experiment for direct Hugging Face execution,
-AirLLM-style layer paging, and quantized execution. Failed runs are preserved as valid
-measurements when they are saved with model, prompt, hardware, and error context.
+AirLLM-style layer paging, and quantized execution. The current 7B evidence contains successful
+generation rows for all three runners after fixing the AirLLM input path and switching the final
+quantized run to bitsandbytes 8-bit loading with CPU offload.
 
 ## Hardware Specification
 
@@ -81,14 +82,9 @@ The final hardware snapshot is stored in `results/raw/hardware.json`. The observ
 Windows 11 laptop with 4 physical CPU cores, 8 logical CPU cores, 15.70 GiB RAM, and an NVIDIA
 GeForce RTX 3050 Laptop GPU with 4.0 GiB CUDA-visible VRAM.
 
-## Selected Model
-
-Configured model: `{config.model.name}`. This 7B instruction model is intentionally
-uncomfortable for the local hardware: it is much larger than the 4 GiB laptop GPU can hold
-comfortably and is large enough to expose RAM pressure during quantization.
-
 ## Measurements
 
+- Model: `{config.model.name}`
 - Raw result count: {analysis["result_count"]}
 - Successful runs: {analysis["success_count"]}
 - Failed runs: {analysis["failure_count"]}
@@ -102,25 +98,27 @@ Comparison tables are generated under `results/processed/`; plots are generated 
 ## Baseline Direct Run
 
 The baseline runner uses `AutoTokenizer` and `AutoModelForCausalLM` with `device: auto`. In the
-current evidence both baseline prompts succeeded. Model load took about 353.12 seconds, prompt
-latency was about 226.72 to 229.33 seconds, throughput was about 0.10 to 0.13 output tokens per
+current evidence both baseline prompts succeeded. Model load took about 16.64 seconds, prompt
+latency was about 210.26 to 216.45 seconds, throughput was about 0.10 to 0.14 output tokens per
 second, and CUDA peak allocation was about 4.0 GiB.
 
 ## AirLLM Run
 
 AirLLM is analyzed as a paging strategy: model layers are stored as shards and moved through
-memory instead of keeping all weights resident at once. In the current evidence AirLLM imported
-and created 7B shards, but both prompt rows failed before generation with
-`AttributeError: 'str' object has no attribute 'shape'`.
+memory instead of keeping all weights resident at once. The earlier failure happened because the
+runner passed a raw prompt string into AirLLM generation; the fixed runner tokenizes the prompt,
+moves tensors to the model device when available, and decodes generated token IDs. In the current
+evidence both AirLLM prompts succeeded. Load time was about 4.31 seconds, prompt latency was about
+443.91 to 446.69 seconds, and throughput was about 0.05 to 0.07 output tokens per second.
 
 ## Quantization Run
 
 The quantized runner supports `bitsandbytes`-style low-bit loading where available and CPU
-`torch.dynamic_int8` for Windows validation. In the current 7B evidence dynamic-int8 is stopped
-by a pre-load memory guard: the cached checkpoint is about 14.2 GiB, physical RAM is about
-15.7 GiB, and estimated conversion need is about 31.9 GiB. The two quantized rows are structured
-`MemoryError` failures, so no quantized latency, TTFT, TPOT, throughput, RAM, VRAM, or output
-quality metric is claimed.
+`torch.dynamic_int8` for smaller CPU validation models. The 7B Windows path now uses
+bitsandbytes 8-bit loading with fp32 CPU offload because dynamic-int8 conversion was too large
+for local RAM. In the current evidence both quantized prompts succeeded. Load time was about
+54.82 seconds, prompt latency was about 74.73 to 112.09 seconds, throughput was about 0.20 to
+0.40 output tokens per second, and CUDA peak allocation was about 8.32 GiB with CPU offload.
 
 ## Prefill, Decode, TTFT, and TPOT
 
@@ -137,16 +135,15 @@ offline execution, learning, and control.
 
 ## Negative Results and Limitations
 
-Current failed runs: {len(failures)}. AirLLM failed due package/model compatibility before
-generation. Quantized dynamic-int8 failed due estimated RAM pressure before conversion. Token
-counts are approximate, RAM sampling can miss short spikes, and output quality can only be
-reviewed for successful baseline rows in the final evidence.
+Current failed runs: {analysis["failure_count"]}. Token counts are approximate, RAM sampling can
+miss short spikes, AirLLM does not expose TTFT through the same streaming interface, and
+bitsandbytes offload depends on CUDA, Accelerate, and Transformers compatibility.
 
 ## Final Engineering Conclusions
 
 The final 7B evidence is realistic for constrained local LLM work: direct Transformers inference
-works but is slow, AirLLM can fail before generation despite creating shards, and CPU dynamic-int8
-can be infeasible on a 16 GiB RAM laptop. The repository still satisfies the assignment because
-it attempts all required paths, preserves failures as structured evidence, and connects the
-measurements to Prefill, Decode, paging, quantization, memory pressure, and API/local cost.
+works but is slow, AirLLM succeeds but is the slowest generation path on this machine, and
+bitsandbytes 8-bit quantization with CPU offload gives the fastest observed generation among the
+three tested runners. The repository connects the measurements to Prefill, Decode, paging,
+quantization, memory pressure, and API/local cost.
 """

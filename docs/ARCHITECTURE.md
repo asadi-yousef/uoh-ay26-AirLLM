@@ -49,7 +49,7 @@ README.md / docs/REPORT.md
 | `runners/common.py` | Shared prompt iteration and structured failure creation |
 | `runners/baseline_runner.py` | Direct Transformers inference |
 | `runners/airllm_runner.py` | AirLLM load/generation attempt and shard path metadata |
-| `runners/quantized_runner.py` | `bitsandbytes`, CPU dynamic-int8, and dynamic-int8 memory guard |
+| `runners/quantized_runner.py` | `bitsandbytes`, CPU dynamic-int8, offload, and memory guard |
 | `cost_analysis.py` | API/local cost estimates and break-even scan |
 | `plotting.py` | Matplotlib figures |
 | `report.py` | Analysis and report generation |
@@ -58,19 +58,21 @@ README.md / docs/REPORT.md
 
 - Heavy model packages are lazy-imported so normal tests do not require model downloads.
 - Every runner returns structured results instead of crashing the whole benchmark.
-- Failed rows are preserved because negative results are valid assignment evidence.
+- Failed rows are preserved because negative results are valid assignment evidence when they
+  happen.
 - Runner commands remove stale JSON/CSV outputs for that runner before writing fresh results.
 - Config owns paths, model choice, prompts, and cost assumptions.
 - Raw local artifacts are ignored by Git; processed tables and figures are committed.
 - Tests use fake dependencies for model paths so CI remains lightweight.
 - The dynamic-int8 path checks cached checkpoint footprint against RAM before conversion.
+- The final 7B quantized path uses bitsandbytes 8-bit with fp32 CPU offload.
 
 ## Final Evidence Shape
 
 - Baseline has two successful 7B rows with latency, TTFT, TPOT, throughput, RAM, and VRAM.
-- AirLLM has two failed 7B rows with `AttributeError`.
-- Quantized has two failed 7B rows with load-stage `MemoryError`.
-- Analysis therefore contains six rows, two successes, and four failures.
+- AirLLM has two successful 7B rows with latency, TPOT, throughput, RAM, and VRAM.
+- Quantized has two successful 7B rows with latency, TTFT, TPOT, throughput, RAM, and VRAM.
+- Analysis therefore contains six rows, six successes, and zero failures.
 - Processed evidence is committed under `results/processed/`; raw JSON/CSV evidence remains
   local unless an evaluator explicitly requires it.
 

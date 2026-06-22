@@ -16,9 +16,9 @@ def plot_metric(results: list[BenchmarkResult], metric_name: str, output_path: P
     """Create a bar chart for a benchmark metric."""
     grouped: dict[str, list[float]] = {}
     for result in results:
-        grouped.setdefault(result.runner, [])
         value = getattr(result.metrics, metric_name)
         if value is not None:
+            grouped.setdefault(result.runner, [])
             grouped[result.runner].append(value)
     if not grouped:
         return None
@@ -29,20 +29,35 @@ def plot_metric(results: list[BenchmarkResult], metric_name: str, output_path: P
     ]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(8, 4))
-    bars = plt.bar(labels, values)
-    for bar, metric_values in zip(bars, grouped.values(), strict=True):
-        if metric_values:
-            continue
-        bar.set_hatch("//")
-        plt.text(
-            bar.get_x() + bar.get_width() / 2,
-            0,
-            "failed",
-            ha="center",
-            va="bottom",
-        )
+    plt.bar(labels, values)
     plt.ylabel(metric_name.replace("_", " "))
     plt.xlabel("runner")
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    return output_path
+
+
+def plot_runner_outcomes(results: list[BenchmarkResult], output_path: Path) -> Path | None:
+    """Create a stacked bar chart showing success and failure counts by runner."""
+    if not results:
+        return None
+    runners = sorted({result.runner for result in results})
+    success_counts = [
+        sum(result.runner == runner and result.status == "success" for result in results)
+        for runner in runners
+    ]
+    failure_counts = [
+        sum(result.runner == runner and result.status == "failed" for result in results)
+        for runner in runners
+    ]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(8, 4))
+    plt.bar(runners, success_counts, label="success")
+    plt.bar(runners, failure_counts, bottom=success_counts, label="failed")
+    plt.ylabel("result rows")
+    plt.xlabel("runner")
+    plt.legend()
     plt.tight_layout()
     plt.savefig(output_path)
     plt.close()

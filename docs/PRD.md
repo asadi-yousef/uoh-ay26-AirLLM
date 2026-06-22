@@ -165,7 +165,7 @@ The final bounded stress experiment is configured as:
 - Runs: one per prompt
 - Output length: 16 max new tokens
 - Hardware: Windows 11 laptop with 15.70 GiB RAM and an RTX 3050 Laptop GPU visible to CUDA
-- Quantization: CPU dynamic-int8
+- Quantization: bitsandbytes 8-bit with fp32 CPU offload
 - AirLLM cache: `airllm_cache/qwen2_5_7b/layer_shards`
 
 This model was selected because it is large enough to be slow and uncomfortable on the target
@@ -193,6 +193,7 @@ machine while remaining bounded enough to complete a short experiment.
 - `results/figures/latency.png`
 - `results/figures/throughput.png`
 - `results/figures/memory.png`
+- `results/figures/outcomes.png`
 - `results/figures/cost_curve.png`
 - `docs/REPORT.md`
 
@@ -218,11 +219,10 @@ machine while remaining bounded enough to complete a short experiment.
 - Hardware: Windows 11, 4 physical cores, 8 logical cores, 15.70 GiB RAM, NVIDIA GeForce
   RTX 3050 Laptop GPU, 4.0 GiB VRAM, CUDA available.
 - Baseline: succeeded on both final prompts but slowly.
-- AirLLM: imported for the 7B run, then failed before generation with
-  `AttributeError: 'str' object has no attribute 'shape'`.
-- Quantized: failed on both prompts with load-stage `MemoryError` from the dynamic-int8 memory
-  guard.
-- Analysis: 6 raw results, 2 successes, 4 failures.
+- AirLLM: succeeded on both prompts after tokenized input handling and Transformers 4.45.x
+  compatibility pinning.
+- Quantized: succeeded on both prompts with bitsandbytes 8-bit loading and CPU offload.
+- Analysis: 6 raw results, 6 successes, 0 failures.
 - Cost model: no break-even within configured monthly request volumes.
 
 ## Risks
@@ -230,7 +230,7 @@ machine while remaining bounded enough to complete a short experiment.
 - AirLLM compatibility can vary by version and model architecture.
 - CPU inference can be too slow for 7B-class models, and a 4 GiB laptop GPU is too small
   for comfortable unquantized large-model experimentation.
-- `bitsandbytes` may not work on Windows or CPU-only machines.
+- `bitsandbytes` may not work on every Windows, CUDA, Python, or hardware combination.
 - CPU dynamic-int8 can temporarily need more RAM than the compressed model footprint and can be
   infeasible for a 7B model on a 16 GiB RAM laptop.
 - Python 3.12 was used for the final hardware snapshot; Python 3.13 may be ahead of some ML

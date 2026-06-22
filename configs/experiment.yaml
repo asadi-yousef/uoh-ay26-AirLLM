@@ -34,9 +34,9 @@ airllm:
 
 quantization:
   enabled: true
-  # Use "dynamic_int8" for CPU-only Windows validation, or "bitsandbytes"
-  # for 4-bit/8-bit CUDA environments where bitsandbytes is available.
-  mode: "dynamic_int8"
+  # Use bitsandbytes 8-bit with CPU offload for the 7B Windows validation path.
+  # Use "dynamic_int8" only for smaller CPU-only validation models.
+  mode: "bitsandbytes"
   bits: 8
   compute_dtype: "float16"
 

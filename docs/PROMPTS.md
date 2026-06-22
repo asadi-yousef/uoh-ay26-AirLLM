@@ -28,8 +28,8 @@ Benchmark settings that control prompt execution:
 | Runner | Prompt 0 | Prompt 1 |
 | --- | --- | --- |
 | `baseline` | Success; slow generation with measured TTFT/TPOT/latency/throughput. | Success; slow generation with measured TTFT/TPOT/latency/throughput. |
-| `airllm` | Failed before generation with `AttributeError`. | Failed before generation with `AttributeError`. |
-| `quantized` | Failed at load stage with dynamic-int8 RAM guard `MemoryError`. | Failed at load stage with dynamic-int8 RAM guard `MemoryError`. |
+| `airllm` | Success; slowest measured generation path, TTFT unavailable. | Success; slowest measured generation path, TTFT unavailable. |
+| `quantized` | Success; bitsandbytes 8-bit with CPU offload, fastest measured generation path. | Success; bitsandbytes 8-bit with CPU offload, fastest measured generation path. |
 
 ## Representative Development Prompts
 
@@ -67,10 +67,14 @@ These are reconstructed prompts that match the work performed in this repository
 - Diagnose why 7B dynamic-int8 stalls or crashes on a 16 GiB RAM laptop.
 - Add a memory guard that estimates cached checkpoint size and stops dynamic-int8 before native
   conversion can exceed RAM.
+- Fix AirLLM generation by tokenizing prompts and decoding token IDs instead of passing raw
+  strings to `model.generate`.
+- Pin Transformers below 4.46 for the current AirLLM/Qwen2 compatibility path.
+- Switch final 7B quantization from dynamic-int8 to bitsandbytes 8-bit with CPU offload.
 - Regenerate analysis so `results/processed/comparison_table.csv` contains only
   `Qwen/Qwen2.5-7B-Instruct` rows.
-- Update README, PRDs, TODO, and report so they no longer claim old 3B or stale quantized-success
-  evidence.
+- Update README, PRDs, TODO, and report so they no longer claim old 3B, stale failure evidence,
+  or missing quantized/AirLLM plot bars.
 - Ensure every Python file has at most 150 lines by splitting focused tests into separate files.
 - Run `uv run pytest` and `uv run ruff check .` before final submission.
 

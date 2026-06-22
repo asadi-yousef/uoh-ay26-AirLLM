@@ -44,7 +44,7 @@ The system is a Python package with a CLI front end and separated layers:
 | `runners/common.py` | Prompt iteration, successful run measurement, failed result creation |
 | `runners/baseline_runner.py` | Direct Transformers model loading and generation |
 | `runners/airllm_runner.py` | AirLLM import, layer-shard path handling, generation attempt |
-| `runners/quantized_runner.py` | `bitsandbytes` and CPU dynamic-int8 quantized paths |
+| `runners/quantized_runner.py` | `bitsandbytes`, CPU offload, and CPU dynamic-int8 quantized paths |
 | `cost_analysis.py` | Local/API monthly cost estimates and break-even scan |
 | `plotting.py` | Latency, throughput, memory, and cost figures |
 | `report.py` | Generated Markdown report body |
@@ -165,11 +165,12 @@ uv run pytest
 - Use config-driven paths so model/cache/output locations are not hard-coded.
 - Save failures as result objects so negative outcomes remain analyzable.
 - Lazy-import heavy dependencies so tests and docs can run without optional model packages.
-- Use CPU dynamic-int8 as the Windows quantization attempt and preserve a structured
-  RAM-pressure failure when the 7B conversion is too large.
+- Use bitsandbytes 8-bit with CPU offload as the final 7B Windows quantization path.
+- Keep CPU dynamic-int8 as a smaller-model validation path and preserve a structured
+  RAM-pressure failure when conversion is too large.
 - Add a memory guard before dynamic-int8 conversion so the benchmark writes failed rows instead
   of crashing after loading a large checkpoint.
-- Keep `bitsandbytes` support for CUDA/non-Windows environments.
+- Keep `bitsandbytes` support for the final CUDA-visible offload environment.
 - Commit final plots and processed table because they are small and useful to reviewers.
 - Keep raw model outputs, model caches, and AirLLM shards out of the intended commit.
 - Use approximate token counts to keep the analysis dependency-light.
@@ -181,9 +182,9 @@ uv run pytest
 - Committing raw JSON outputs: rejected as a default because raw outputs can be noisy and large,
   though local raw evidence is still generated.
 - Using only a tiny model: rejected for final submission because the assignment expects stress.
-- Using only `bitsandbytes`: rejected for final Windows validation because backend support was
-  not reliable.
-- Hiding AirLLM failure: rejected because the assignment values analyzed negative outcomes.
+- Using only CPU dynamic-int8: rejected for the final 7B run because conversion exceeded the
+  observed RAM budget.
+- Hiding failed attempts: rejected because the assignment values analyzed negative outcomes.
 
 ## Final Experiment Record
 
@@ -204,9 +205,10 @@ Final benchmark settings:
 Observed final result:
 
 - Baseline succeeded for both prompts.
-- AirLLM failed before generation with `AttributeError: 'str' object has no attribute 'shape'`.
-- Quantized dynamic-int8 failed safely for both prompts with load-stage `MemoryError`.
-- Analysis produced six result rows: two successes and four failures.
+- AirLLM succeeded for both prompts after tokenized input handling and a Transformers 4.45.x
+  compatibility pin.
+- Quantized bitsandbytes 8-bit with CPU offload succeeded for both prompts.
+- Analysis produced six result rows: six successes and zero failures.
 - No break-even appeared in the configured cost volumes.
 
 ## Mapping To Assignment Requirements
@@ -216,15 +218,15 @@ Observed final result:
 | Hardware documentation | `hardware.py` and `hardware` CLI | Windows, 15.70 GiB RAM, RTX 3050 Laptop GPU |
 | Model choice | Config, README, report | Qwen2.5-7B as the hardware-boundary stress model |
 | Direct baseline | `baseline_runner.py` | Two successful runs |
-| AirLLM | `airllm_runner.py` | Attempted 7B run, then failed with `AttributeError` |
-| Quantization | `quantized_runner.py` | Two dynamic-int8 memory-guard failures |
-| TTFT | Streaming Transformers generation | Present for baseline; unavailable for failed AirLLM/quantized rows |
-| TPOT/throughput | `metrics.py` | Present for baseline; unavailable for failed AirLLM/quantized rows |
+| AirLLM | `airllm_runner.py` | Two successful 7B runs; slowest path |
+| Quantization | `quantized_runner.py` | Two successful bitsandbytes 8-bit offload runs; fastest path |
+| TTFT | Streaming Transformers generation | Present for baseline and quantized; unavailable for AirLLM |
+| TPOT/throughput | `metrics.py` | Present for baseline, AirLLM, and quantized rows |
 | RAM/VRAM | RAM sampler and CUDA helper | RAM present; CUDA-visible 4.0 GiB VRAM |
 | Plots/tables | `plotting.py` and `report.py` | Four plots and comparison CSV |
 | Cost analysis | `cost_analysis.py` | No configured break-even |
-| Negative results | Structured failures | AirLLM and quantized failures preserved |
-| Quality review | Report/README narrative | Baseline output review only for final evidence |
+| Negative results | Structured failures | Supported by schema and tests if a runner fails |
+| Quality review | Report/README narrative | Smoke review available for all successful final runners |
 
 ## Verification Plan
 
@@ -234,5 +236,5 @@ Observed final result:
 - Confirm README plots render.
 - Confirm ignored artifacts are not staged.
 - Confirm private PDFs are not staged.
-- Confirm AirLLM failure is described accurately.
+- Confirm AirLLM success and TTFT limitation are described accurately.
 - Confirm quantization claims match measured evidence.

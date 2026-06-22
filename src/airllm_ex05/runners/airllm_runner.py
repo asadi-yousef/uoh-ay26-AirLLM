@@ -16,7 +16,8 @@ def run_airllm(config: ExperimentConfig) -> list[BenchmarkResult]:
     """Run AirLLM inference or return structured failures."""
     try:
         airllm = importlib.import_module("airllm")
-        model, load_time = _load_airllm_model(config, airllm)
+        transformers = importlib.import_module("transformers")
+        model, tokenizer, load_time = _load_airllm_model(config, airllm, transformers)
     except Exception as exc:
         return [
             failed_result(config, RUNNER_AIRLLM, prompt, pi, ri, exc, {"stage": "load"})
@@ -33,7 +34,9 @@ def run_airllm(config: ExperimentConfig) -> list[BenchmarkResult]:
                     prompt,
                     prompt_index,
                     run_index,
-                    lambda prompt=prompt: _generate(model, prompt, config.benchmark.max_new_tokens),
+                    lambda prompt=prompt: _generate(
+                        model, tokenizer, prompt, config.benchmark.max_new_tokens
+                    ),
                     load_time,
                     {"layer_shards": str(config.airllm.layer_shards_saving_path)},
                 )
@@ -45,7 +48,9 @@ def run_airllm(config: ExperimentConfig) -> list[BenchmarkResult]:
     return results
 
 
-def _load_airllm_model(config: ExperimentConfig, airllm: Any) -> tuple[Any, float]:
+def _load_airllm_model(
+    config: ExperimentConfig, airllm: Any, transformers: Any
+) -> tuple[Any, Any, float]:
     started = time.perf_counter()
     cache_dir = str(config.model.cache_dir)
     layer_shards_path = ensure_directory(config.airllm.layer_shards_saving_path)
@@ -58,15 +63,22 @@ def _load_airllm_model(config: ExperimentConfig, airllm: Any) -> tuple[Any, floa
     if model_class is None:
         msg = "Installed airllm package does not expose AutoModel or AirLLMLlama2."
         raise RuntimeError(msg)
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        config.model.name,
+        cache_dir=cache_dir,
+        trust_remote_code=config.model.trust_remote_code,
+    )
     model = model_class.from_pretrained(
         config.model.name,
         layer_shards_saving_path=str(layer_shards_path),
     )
-    return model, time.perf_counter() - started
+    return model, tokenizer, time.perf_counter() - started
 
 
-def _generate(model: Any, prompt: str, max_new_tokens: int) -> str:
-    output = model.generate(prompt, max_new_tokens=max_new_tokens)
-    if isinstance(output, list):
-        return str(output[0])
-    return str(output)
+def _generate(model: Any, tokenizer: Any, prompt: str, max_new_tokens: int) -> str:
+    inputs = tokenizer(prompt, return_tensors="pt")
+    device = getattr(model, "device", None)
+    if device is not None:
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+    output = model.generate(**inputs, max_new_tokens=max_new_tokens)
+    return tokenizer.decode(output[0], skip_special_tokens=True)
