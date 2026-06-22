@@ -37,7 +37,7 @@ def plot_metric(results: list[BenchmarkResult], metric_name: str, output_path: P
         plt.text(
             bar.get_x() + bar.get_width() / 2,
             0,
-            "N/A",
+            "failed",
             ha="center",
             va="bottom",
         )
