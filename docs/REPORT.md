@@ -101,6 +101,22 @@ Current failed runs: 0. Token counts are approximate, RAM sampling can
 miss short spikes, AirLLM does not expose TTFT through the same streaming interface, and
 bitsandbytes offload depends on CUDA, Accelerate, and Transformers compatibility.
 
+## Submission Readiness and Self Evaluation
+
+Self-assessed grade: **90/100**.
+
+The project appears ready for submission against the assignment and software-guideline PDFs. It
+has the required root README technical report, hardware snapshot, baseline/AirLLM/quantized
+comparison, latency/throughput/TTFT/TPOT/memory metrics where available, API versus on-prem cost
+analysis, figures, screenshots, PRD/PLAN/TODO documentation, specialized PRDs, prompt book,
+Ruff, pytest, and 85% coverage enforcement.
+
+The self-grade is not higher because the experiment is intentionally short, AirLLM TTFT is not
+available through the current runner integration, RAM sampling can miss short spikes, and the
+cost model uses assumptions rather than measured power data. The score is still high because the
+submission is reproducible, transparent about limitations, and includes both successful final 7B
+evidence and the engineering trail needed for review.
+
 ## Final Engineering Conclusions
 
 The final 7B evidence is realistic for constrained local LLM work: direct Transformers inference

@@ -548,3 +548,4 @@ as planned evidence, not removed from the record.
 - [x] Confirm all CLI commands are shown with `uv run`.
 - [x] Confirm all paths use repository-relative examples.
 - [x] Confirm all final claims can be traced to code, config, or result files.
+- [x] Add modest self-evaluation sections to README and report.

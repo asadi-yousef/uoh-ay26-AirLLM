@@ -78,6 +78,43 @@ These are reconstructed prompts that match the work performed in this repository
 - Ensure every Python file has at most 150 lines by splitting focused tests into separate files.
 - Run `uv run pytest` and `uv run ruff check .` before final submission.
 
+## Recent Submission-Polish Prompts
+
+These prompts are recorded from the final review phase because they directly shaped the submitted
+documentation and evidence:
+
+- Clarify that the quantized CUDA/offload memory value around 8.3 GB must not be described as
+  pure dedicated RTX 3050 VRAM residency, because the physical GPU has only 4 GB dedicated VRAM.
+- Inspect `README.md`, `docs/REPORT.md`, `results/processed/comparison_table.csv`,
+  `results/figures/memory.png`, `src/airllm_ex05/plotting.py`, and report generation code for
+  `peak_vram_mb` wording.
+- Rename the memory plot labels if it is RAM-only, regenerate the figure if needed, run Ruff and
+  pytest, and commit only wording or plot-label changes.
+- Review the PDFs in `documents/` because they contain the submission rules, then act according
+  to those rules and explain what screenshots must be captured.
+- Explain what to do when one screenshot cannot capture all required content; use multiple
+  readable numbered screenshots rather than one unreadable full-page image.
+- Decide whether an AirLLM shard-cache screenshot is useful as proof, while keeping actual
+  `airllm_cache/` files ignored and out of Git.
+- Embed the screenshot folders in the README and report after screenshots were captured under
+  `docs/screenshots/`.
+- Scan the repository against the assignment PDFs, add a self-evaluation section, and keep the
+  grade modest rather than overclaiming.
+
+## Repository-Specific Prompt Categories
+
+The development prompts above can be grouped into the following engineering intents:
+
+| Category | Prompt intent | Repository evidence |
+| --- | --- | --- |
+| Assignment interpretation | Turn the Exercise 05 PDF into concrete deliverables and acceptance criteria. | `docs/PRD.md`, `docs/PLAN.md`, `docs/TODO.md` |
+| Benchmark design | Use one config to compare baseline, AirLLM, and quantized local inference. | `configs/experiment.yaml`, `src/airllm_ex05/cli.py` |
+| Measurement implementation | Capture load time, latency, TTFT, TPOT, throughput, RAM, and CUDA/offload memory indicators. | `src/airllm_ex05/metrics.py`, `src/airllm_ex05/runners/common.py` |
+| AirLLM debugging | Tokenize prompts before generation and preserve layer-shard evidence without committing caches. | `src/airllm_ex05/runners/airllm_runner.py`, `docs/screenshots/05-airllm-shards-folder/1.png` |
+| Quantization debugging | Use bitsandbytes 8-bit CPU offload for the final 7B run and retain dynamic-int8 only for smaller validation. | `src/airllm_ex05/runners/quantized_runner.py`, `docs/PRD_quantization.md` |
+| Analysis and reporting | Generate comparison tables, plots, cost analysis, report, screenshots, and README narrative. | `src/airllm_ex05/report.py`, `src/airllm_ex05/plotting.py`, `results/` |
+| Submission QA | Run Ruff and pytest, enforce 85% coverage, keep private/heavy files ignored, and add self-evaluation. | `pyproject.toml`, `.gitignore`, `README.md`, `docs/REPORT.md` |
+
 ## Prompting Policy
 
 - Final measurement prompts must live in `configs/experiment.yaml`.
