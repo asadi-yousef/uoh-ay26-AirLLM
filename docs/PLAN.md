@@ -150,7 +150,7 @@ uv run pytest
 ### Phase 8: Final Local Experiment
 
 - Validate pipeline with a tiny model first.
-- Select `Qwen/Qwen2.5-3B-Instruct` as the final bounded stress model.
+- Select `Qwen/Qwen2.5-7B-Instruct` as the final stress model.
 - Keep max output short to complete on constrained local hardware.
 - Run baseline.
 - Run AirLLM.
@@ -165,8 +165,10 @@ uv run pytest
 - Use config-driven paths so model/cache/output locations are not hard-coded.
 - Save failures as result objects so negative outcomes remain analyzable.
 - Lazy-import heavy dependencies so tests and docs can run without optional model packages.
-- Use CPU dynamic-int8 as the final quantization backend on Windows because it was the
-  practical path for this environment.
+- Use CPU dynamic-int8 as the Windows quantization attempt and preserve a structured
+  RAM-pressure failure when the 7B conversion is too large.
+- Add a memory guard before dynamic-int8 conversion so the benchmark writes failed rows instead
+  of crashing after loading a large checkpoint.
 - Keep `bitsandbytes` support for CUDA/non-Windows environments.
 - Commit final plots and processed table because they are small and useful to reviewers.
 - Keep raw model outputs, model caches, and AirLLM shards out of the intended commit.
@@ -185,7 +187,7 @@ uv run pytest
 
 ## Final Experiment Record
 
-Final model: `Qwen/Qwen2.5-3B-Instruct`
+Final stress model: `Qwen/Qwen2.5-7B-Instruct`
 
 Final prompts:
 
@@ -202,9 +204,9 @@ Final benchmark settings:
 Observed final result:
 
 - Baseline succeeded for both prompts.
-- AirLLM created 76 shard files totaling about 6.17 GB, then failed with `IndexError`.
-- Quantized dynamic-int8 succeeded for both prompts.
-- Analysis produced six result rows: four successes and two failures.
+- AirLLM failed before generation with `AttributeError: 'str' object has no attribute 'shape'`.
+- Quantized dynamic-int8 failed safely for both prompts with load-stage `MemoryError`.
+- Analysis produced six result rows: two successes and four failures.
 - No break-even appeared in the configured cost volumes.
 
 ## Mapping To Assignment Requirements
@@ -212,17 +214,17 @@ Observed final result:
 | Assignment requirement | Project support | Final evidence |
 | --- | --- | --- |
 | Hardware documentation | `hardware.py` and `hardware` CLI | Windows, 15.70 GiB RAM, RTX 3050 Laptop GPU |
-| Model choice | Config, README, report | Qwen2.5-3B as bounded stress model |
+| Model choice | Config, README, report | Qwen2.5-7B as the hardware-boundary stress model |
 | Direct baseline | `baseline_runner.py` | Two successful runs |
-| AirLLM | `airllm_runner.py` | Sharded model, then failed with `IndexError` |
-| Quantization | `quantized_runner.py` | Two dynamic-int8 successes |
-| TTFT | Streaming Transformers generation | Present for baseline and quantized |
-| TPOT/throughput | `metrics.py` | Present for baseline and quantized |
+| AirLLM | `airllm_runner.py` | Attempted 7B run, then failed with `AttributeError` |
+| Quantization | `quantized_runner.py` | Two dynamic-int8 memory-guard failures |
+| TTFT | Streaming Transformers generation | Present for baseline; unavailable for failed AirLLM/quantized rows |
+| TPOT/throughput | `metrics.py` | Present for baseline; unavailable for failed AirLLM/quantized rows |
 | RAM/VRAM | RAM sampler and CUDA helper | RAM present; CUDA-visible 4.0 GiB VRAM |
 | Plots/tables | `plotting.py` and `report.py` | Four plots and comparison CSV |
 | Cost analysis | `cost_analysis.py` | No configured break-even |
-| Negative results | Structured failures | AirLLM failures preserved |
-| Quality review | Report/README narrative | Manual small-sample review required |
+| Negative results | Structured failures | AirLLM and quantized failures preserved |
+| Quality review | Report/README narrative | Baseline output review only for final evidence |
 
 ## Verification Plan
 

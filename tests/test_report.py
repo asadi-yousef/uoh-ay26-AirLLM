@@ -34,7 +34,10 @@ def _write_config(tmp_path: Path) -> Path:
     source = source.replace("results/figures", (tmp_path / "figures").as_posix())
     source = source.replace("docs/REPORT.md", (tmp_path / "REPORT.md").as_posix())
     source = source.replace("model_cache/huggingface", (tmp_path / "cache").as_posix())
-    source = source.replace("airllm_cache/layer_shards", (tmp_path / "airllm").as_posix())
+    source = source.replace(
+        "airllm_cache/qwen2_5_7b/layer_shards",
+        (tmp_path / "airllm").as_posix(),
+    )
     config_path = tmp_path / "experiment.yaml"
     config_path.write_text(source, encoding="utf-8")
     return config_path

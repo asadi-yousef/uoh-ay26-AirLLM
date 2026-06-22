@@ -69,6 +69,7 @@ def _quantized(args: argparse.Namespace) -> int:
 
 def _run_and_save(config_path: str | Path, runner: Runner, label: str) -> int:
     config = load_config(config_path)
+    _clear_runner_outputs(config.outputs.raw_dir, label)
     results = runner(config)
     for result in results:
         save_result(result, config.outputs.raw_dir)
@@ -80,6 +81,15 @@ def _run_and_save(config_path: str | Path, runner: Runner, label: str) -> int:
         f"({successes} successful) to {config.outputs.raw_dir}"
     )
     return 0
+
+
+def _clear_runner_outputs(raw_dir: Path, label: str) -> None:
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    for path in raw_dir.glob(f"{label}_p*_r*.json"):
+        path.unlink()
+    csv_path = raw_dir / f"{label}_results.csv"
+    if csv_path.exists():
+        csv_path.unlink()
 
 
 def _analyze(args: argparse.Namespace) -> int:

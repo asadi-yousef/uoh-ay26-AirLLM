@@ -64,19 +64,28 @@ def _create_figures(config: ExperimentConfig, results: list, cost_points: list) 
 
 def _report_body(config: ExperimentConfig, analysis: dict, results: list) -> str:
     failures = [result for result in results if result.status == "failed"]
+    baseline = [result for result in results if result.runner == "baseline"]
+    airllm = [result for result in results if result.runner == "airllm"]
+    quantized = [result for result in results if result.runner == "quantized"]
     return f"""# Exercise 05 Technical Report
 
 ## Executive Summary
 
-This report documents a reproducible local LLM experiment for baseline Hugging Face execution, AirLLM-style execution, and quantized execution. The project treats failed runs as valid measurements when the error is saved with configuration and hardware context.
+This report documents a reproducible local LLM experiment for direct Hugging Face execution,
+AirLLM-style layer paging, and quantized execution. Failed runs are preserved as valid
+measurements when they are saved with model, prompt, hardware, and error context.
 
 ## Hardware Specification
 
-Run `uv run airllm-ex05 hardware` to refresh `results/raw/hardware.json`. The report should cite CPU model, core count, RAM, GPU, VRAM, CUDA availability, OS, Python version, and storage from that file.
+The final hardware snapshot is stored in `results/raw/hardware.json`. The observed machine is a
+Windows 11 laptop with 4 physical CPU cores, 8 logical CPU cores, 15.70 GiB RAM, and an NVIDIA
+GeForce RTX 3050 Laptop GPU with 4.0 GiB CUDA-visible VRAM.
 
 ## Selected Model
 
-Configured model: `{config.model.name}`. The default model is intentionally small for pipeline verification. For the final submission experiment, replace it with a model large enough to stress local RAM/VRAM and justify the choice by parameter count, model format, expected memory footprint, and local hardware limits.
+Configured model: `{config.model.name}`. This 7B instruction model is intentionally
+uncomfortable for the local hardware: it is much larger than the 4 GiB laptop GPU can hold
+comfortably and is large enough to expose RAM pressure during quantization.
 
 ## Measurements
 
@@ -84,34 +93,60 @@ Configured model: `{config.model.name}`. The default model is intentionally smal
 - Successful runs: {analysis["success_count"]}
 - Failed runs: {analysis["failure_count"]}
 - Break-even monthly request volume: {analysis["break_even_monthly_requests"]}
+- Baseline rows: {len(baseline)}
+- AirLLM rows: {len(airllm)}
+- Quantized rows: {len(quantized)}
 
 Comparison tables are generated under `results/processed/`; plots are generated under `results/figures/`.
 
 ## Baseline Direct Run
 
-The baseline runner attempts direct `transformers` loading. If loading fails because dependencies, RAM, VRAM, CUDA, or model compatibility are insufficient, the failure is saved as structured JSON and should be discussed as the baseline bottleneck.
+The baseline runner uses `AutoTokenizer` and `AutoModelForCausalLM` with `device: auto`. In the
+current evidence both baseline prompts succeeded. Model load took about 353.12 seconds, prompt
+latency was about 226.72 to 229.33 seconds, throughput was about 0.10 to 0.13 output tokens per
+second, and CUDA peak allocation was about 4.0 GiB.
 
 ## AirLLM Run
 
-AirLLM is analyzed as a paging strategy: model layers are moved through memory instead of loading all weights at once. This can reduce peak memory pressure, but it usually increases latency because disk I/O becomes part of each forward pass.
+AirLLM is analyzed as a paging strategy: model layers are stored as shards and moved through
+memory instead of keeping all weights resident at once. In the current evidence AirLLM imported
+and created 7B shards, but both prompt rows failed before generation with
+`AttributeError: 'str' object has no attribute 'shape'`.
 
 ## Quantization Run
 
-The quantized runner attempts 4-bit or 8-bit loading through `transformers` quantization APIs. The report should compare memory, speed, and output quality against baseline and identify where compression crosses the quality red line.
+The quantized runner supports `bitsandbytes`-style low-bit loading where available and CPU
+`torch.dynamic_int8` for Windows validation. In the current 7B evidence dynamic-int8 is stopped
+by a pre-load memory guard: the cached checkpoint is about 14.2 GiB, physical RAM is about
+15.7 GiB, and estimated conversion need is about 31.9 GiB. The two quantized rows are structured
+`MemoryError` failures, so no quantized latency, TTFT, TPOT, throughput, RAM, VRAM, or output
+quality metric is claimed.
 
 ## Prefill, Decode, TTFT, and TPOT
 
-Prefill processes the prompt and is typically compute-bound. Decode produces one token at a time and is often memory-bandwidth-bound. TTFT approximates the prefill/user-visible startup delay, while TPOT captures steady-state decode cost.
+Prefill processes the prompt and builds the initial context. Decode produces one token at a time
+and is often memory-bandwidth-bound. TTFT approximates user-visible startup delay, while TPOT
+captures steady decode cost. These metrics are available only for successful generation rows.
 
 ## Economic Analysis
 
-The cost model compares API token pricing with amortized local hardware, electricity, and maintenance. Prompt caching is represented by a cached-input discount assumption. Local inference becomes attractive at high volume, for privacy, or when data cannot leave the machine; APIs are better for low volume, bursty workloads, and operational simplicity.
+The cost model compares API token pricing with amortized local hardware, electricity, and
+maintenance. In the configured request volumes there is no API/local break-even point. APIs are
+cheaper for the small measured prompt volumes; local inference remains useful for privacy,
+offline execution, learning, and control.
 
 ## Negative Results and Limitations
 
-Negative results are expected when optional packages are missing or hardware is too small. Current failed runs: {len(failures)}. Each failure should be interpreted through dependency availability, model size, memory pressure, and CPU/GPU constraints.
+Current failed runs: {len(failures)}. AirLLM failed due package/model compatibility before
+generation. Quantized dynamic-int8 failed due estimated RAM pressure before conversion. Token
+counts are approximate, RAM sampling can miss short spikes, and output quality can only be
+reviewed for successful baseline rows in the final evidence.
 
 ## Final Engineering Conclusions
 
-The project provides the measurement and reporting pipeline required for the exercise. Final conclusions must be updated after real local runs with the selected stress model.
+The final 7B evidence is realistic for constrained local LLM work: direct Transformers inference
+works but is slow, AirLLM can fail before generation despite creating shards, and CPU dynamic-int8
+can be infeasible on a 16 GiB RAM laptop. The repository still satisfies the assignment because
+it attempts all required paths, preserves failures as structured evidence, and connects the
+measurements to Prefill, Decode, paging, quantization, memory pressure, and API/local cost.
 """

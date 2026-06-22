@@ -12,25 +12,27 @@ This repository implements a reproducible local LLM experiment for three executi
 - AirLLM-style layer paging.
 - Quantized inference with CPU dynamic int8.
 
-The final experiment used `Qwen/Qwen2.5-3B-Instruct` on a constrained Windows laptop with
-15.70 GiB RAM and an NVIDIA GeForce RTX 3050 Laptop GPU with 4.0 GiB VRAM visible to CUDA. The
-experiment used two prompts, one run per prompt, and `max_new_tokens: 16`.
+The repository is configured and documented for the final 7B stress run with
+`Qwen/Qwen2.5-7B-Instruct` on a constrained Windows laptop with 15.70 GiB RAM and an
+NVIDIA GeForce RTX 3050 Laptop GPU with 4.0 GiB VRAM visible to CUDA. The experiment uses two
+prompts, one run per prompt, and `max_new_tokens: 16`.
 
-Final result:
+Current 7B result:
 
 - Baseline Transformers inference succeeded, but generation was slow.
-- AirLLM imported and created 76 layer-shard files totaling about 6.17 GB, then failed with
-  `IndexError: list index out of range`.
-- CPU `torch.dynamic_int8` quantization succeeded and improved generation latency and
-  throughput in this bounded run.
-- Analysis produced 6 rows: 4 successes and 2 failures.
+- AirLLM imported for the 7B model, then failed before generation with
+  `AttributeError: 'str' object has no attribute 'shape'`.
+- CPU `torch.dynamic_int8` quantization is implemented, but the final 7B local run now records
+  a structured `MemoryError` before conversion because the cached checkpoint is about 14.2 GiB
+  and the estimated conversion footprint is about 31.9 GiB on a 15.7 GiB RAM laptop.
+- Analysis produced 6 rows: 2 successes and 4 failures.
 - The configured cost model found no local/API break-even point in the tested monthly request
   volumes.
 
-The AirLLM failure is intentionally preserved as valid evidence. The assignment accepts
-negative outcomes when they are measured and explained. In this run, AirLLM reached the
-disk-sharding stage but failed before generation, demonstrating a real package/model
-compatibility risk.
+The AirLLM and quantized failures are intentionally preserved as valid evidence. The assignment
+accepts negative outcomes when they are measured and explained. In this run, AirLLM reached the
+disk-sharding stage but failed before generation, and dynamic-int8 was stopped before a native
+memory crash could erase the result record.
 
 ## Hardware And Model Choice
 
@@ -55,17 +57,16 @@ Final observed hardware:
 | CUDA available | true |
 | Storage | NTFS/FAT32 local partitions, about 932.68 GB each |
 
-Selected model:
+Selected stress model:
 
 ```text
-Qwen/Qwen2.5-3B-Instruct
+Qwen/Qwen2.5-7B-Instruct
 ```
 
-The model was chosen because it is large enough to be uncomfortable on a 16 GiB laptop with a
-4 GiB GPU, but still bounded enough for a short local experiment. A larger model would risk
-turning the homework into an overnight run rather than a controlled measurement. The final
-config keeps the prompt count and output length small so the experiment measures the execution
-path without wasting local compute.
+The model was chosen because a 7B FP16/BF16 checkpoint is far larger than the 4 GiB laptop GPU
+can hold comfortably. This makes baseline failure, CPU offload, or severe latency a useful
+assignment result rather than a surprise. The config keeps the prompt count and output length
+small so the stress run can still produce bounded, auditable evidence.
 
 ## Reproducible Workflow
 
@@ -102,8 +103,8 @@ uv run pytest
 Current verification:
 
 - Ruff: passed.
-- Pytest: 30 passed.
-- Coverage: 88.63%, above the 85% guideline threshold.
+- Pytest: 33 passed.
+- Coverage: 85.94%, above the configured 85% threshold.
 
 ## Configuration
 
@@ -113,14 +114,14 @@ Final benchmark settings:
 
 | Setting | Value |
 | --- | --- |
-| Model | `Qwen/Qwen2.5-3B-Instruct` |
+| Model | `Qwen/Qwen2.5-7B-Instruct` |
 | Prompts | 2 |
 | Runs per prompt | 1 |
 | Warmups | 0 |
 | Max new tokens | 16 |
 | Timeout | 900 seconds |
 | Baseline mode | `transformers` |
-| AirLLM shard path | `airllm_cache/layer_shards` |
+| AirLLM shard path | `airllm_cache/qwen2_5_7b/layer_shards` |
 | Quantization mode | `dynamic_int8` |
 | Quantization bits | 8 |
 
@@ -140,29 +141,32 @@ TTFT, TPOT, paging, VRAM pressure, and local execution tradeoffs.
 
 ## Final Measurements
 
-Processed evidence from `results/processed/comparison_table.csv`:
+Processed evidence from `results/processed/comparison_table.csv`.
+
+Current committed values should be regenerated from `results/processed/comparison_table.csv`
+and the figures under `results/figures/` after each fresh 7B workflow run.
 
 | Runner | Status | Prompt | Load s | Latency s | TTFT s | TPOT s/token | Tok/s | Peak RAM MB | Peak VRAM MB |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | airllm | failed | 0 |  |  |  |  |  |  |  |
 | airllm | failed | 1 |  |  |  |  |  |  |  |
-| baseline | success | 0 | 45.07 | 24.37 | 7.82 | 1.11 | 0.90 | 4734.62 | 2899.59 |
-| baseline | success | 1 | 45.07 | 17.67 | 1.17 | 0.61 | 1.64 | 4744.74 | 2899.70 |
-| quantized | success | 0 | 101.56 | 10.18 | 5.48 | 0.41 | 2.46 | 4569.58 | 0.00 |
-| quantized | success | 1 | 101.56 | 4.35 | 0.34 | 0.16 | 6.21 | 4592.52 | 0.00 |
+| baseline | success | 0 | 353.12 | 226.72 | 17.02 | 10.31 | 0.10 | 5754.13 | 4023.98 |
+| baseline | success | 1 | 353.12 | 229.33 | 15.13 | 7.64 | 0.13 | 5707.85 | 4024.15 |
+| quantized | failed | 0 |  |  |  |  |  |  |  |
+| quantized | failed | 1 |  |  |  |  |  |  |  |
 
 Aggregated summary:
 
 | Runner | Load s | Avg latency s | Avg TTFT s | Avg TPOT s/token | Avg tok/s | Avg peak RAM MB |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| baseline | 45.07 | 21.02 | 4.50 | 0.86 | 1.27 | 4739.68 |
-| quantized dynamic-int8 | 101.56 | 7.27 | 2.91 | 0.28 | 4.33 | 4581.05 |
+| baseline | 353.12 | 228.02 | 16.08 | 8.97 | 0.11 | 5730.99 |
+| quantized dynamic-int8 | unavailable | unavailable | unavailable | unavailable | unavailable | unavailable |
 
 Analysis summary:
 
 - Raw benchmark rows: 6.
-- Successful rows: 4.
-- Failed rows: 2.
+- Successful rows: 2.
+- Failed rows: 4.
 - Break-even monthly request volume: none in the configured volume range.
 
 ## Figures
@@ -179,21 +183,21 @@ Analysis summary:
 
 The baseline runner uses Transformers `AutoTokenizer` and `AutoModelForCausalLM`. The config
 uses `device: auto`, so Transformers/Accelerate chooses the placement. The result recorded
-about 2.9 GB CUDA peak allocation, which means this baseline was not CPU-only.
+about 4.0 GB CUDA peak allocation, which means this baseline was not CPU-only.
 
-Observed baseline behavior:
+Observed 7B baseline behavior:
 
 - Both final prompts succeeded.
-- Model load time was about 45.07 seconds.
-- Prompt 0 generation latency was 24.37 seconds.
-- Prompt 1 generation latency was 17.67 seconds.
-- Throughput ranged from 0.90 to 1.64 output tokens per second.
-- TTFT ranged from 1.17 to 7.82 seconds.
+- Model load time was about 353.12 seconds.
+- Prompt 0 generation latency was 226.72 seconds.
+- Prompt 1 generation latency was 229.33 seconds.
+- Throughput ranged from 0.10 to 0.13 output tokens per second.
+- TTFT ranged from 15.13 to 17.02 seconds.
 
 Interpretation:
 
 The model can run directly on this local machine, but the run is slow. The small laptop GPU is
-visible, but the 4 GiB VRAM budget is still tight for a 3B instruction model. Decode is
+visible, but the 4 GiB VRAM budget is too tight for comfortable 7B instruction-model work. Decode is
 especially sensitive to memory bandwidth because each generated token requires repeated model
 weight access. The larger TTFT on prompt 0 shows the user-visible startup cost of prompt
 processing and first-token production.
@@ -205,28 +209,25 @@ execution. Instead of keeping all weights resident at once, AirLLM shards layers
 through memory. This is analogous to virtual memory and `mmap`: the system can address a model
 larger than comfortable resident memory, but disk I/O becomes part of the inference path.
 
-Observed AirLLM behavior:
+Observed 7B AirLLM behavior:
 
 - The package imported successfully after dependency work.
-- AirLLM created 76 layer-shard files.
-- The shard files totaled about 6.17 GB.
-- AirLLM then failed in its internal loading path.
+- AirLLM then failed before generation.
 - Both prompt rows are failed rows.
-- Error type: `IndexError`.
-- Error message: `list index out of range`.
+- Error type: `AttributeError`.
+- Error message: `'str' object has no attribute 'shape'`.
 
 Interpretation:
 
-This is a negative compatibility result, not a missing experiment. AirLLM reached the
-sharding stage, which confirms that the paging setup began. It failed before generation, so
-the project cannot honestly claim AirLLM TTFT, TPOT, latency, throughput, memory benefit, or
-output quality for this final run. The engineering conclusion is that a memory-saving
-framework can still fail because of model architecture, package assumptions, or version
-compatibility.
+This is a negative compatibility result, not a missing experiment. AirLLM was attempted for the
+configured 7B model, but it failed before generation. The project cannot honestly claim AirLLM
+TTFT, TPOT, latency, throughput, memory benefit, or output quality for this final run. The
+engineering conclusion is that a memory-saving framework can still fail because of model
+architecture, package assumptions, input handling, or version compatibility.
 
 ## Quantization Run
 
-The final successful quantized path uses PyTorch CPU dynamic int8:
+The implemented local quantized path uses PyTorch CPU dynamic int8:
 
 ```text
 torch.ao.quantization.quantize_dynamic(..., dtype=torch.qint8)
@@ -234,27 +235,27 @@ torch.ao.quantization.quantize_dynamic(..., dtype=torch.qint8)
 
 Earlier `bitsandbytes` 4-bit style quantization was not suitable for this Windows setup, so
 the project keeps that code path for CUDA/Linux-like environments but uses dynamic int8 for
-the final validation.
+the local validation attempt.
 
 Observed quantized behavior:
 
-- Both final prompts succeeded.
-- Load time was about 101.56 seconds.
-- Prompt 0 generation latency was 10.18 seconds.
-- Prompt 1 generation latency was 4.35 seconds.
-- Throughput ranged from 2.46 to 6.21 output tokens per second.
-- TTFT ranged from 0.34 to 5.48 seconds.
-- Peak process RSS was roughly 4.57 to 4.59 GB.
-- VRAM was recorded as 0.0 MB because the dynamic-int8 path is CPU-based.
+- Both final prompt rows are failed rows.
+- Error type: `MemoryError`.
+- Error message: dynamic-int8 quantization would likely exceed local RAM before results can be
+  serialized.
+- Cached checkpoint size in the guard message: about 14.2 GiB.
+- Physical RAM in the guard message: about 15.7 GiB.
+- Estimated conversion requirement: about 31.9 GiB.
+- No quantized load time, latency, TTFT, TPOT, throughput, RAM, VRAM, generated text, or output
+  quality can be claimed for the final 7B run.
 
 Interpretation:
 
-Dynamic-int8 improved generation speed in this measured run. The speedup is consistent with
-reduced precision lowering memory bandwidth pressure during decode. However, the evidence does
-not support a universal claim that quantization always lowers process memory: the measured RSS
-was close to the baseline rows, and quantized load time was higher than baseline. The correct
-claim is narrower: CPU dynamic-int8 improved generation throughput for these prompts and this
-hardware, while preserving usable short explanatory output.
+The runner is implemented, tested, and safe to execute, but this 7B model is too large for
+dynamic-int8 conversion on the observed laptop. The code now detects the likely memory blow-up
+before loading and converting the full model, then writes structured failure rows. This is better
+evidence than an unhandled native crash because the failed quantized attempt remains visible in
+the final analysis table.
 
 ## Prefill, Decode, TTFT, And TPOT
 
@@ -273,21 +274,22 @@ The project measures:
 - **Throughput**: output tokens per second.
 - **Total latency**: end-to-end generation time for a prompt.
 
-The baseline and quantized paths use streaming generation when available, so TTFT is measured
-directly. AirLLM has no TTFT in the final evidence because it failed before generation.
+The baseline path uses streaming generation when available, so TTFT is measured directly for
+baseline. AirLLM and quantized rows have no TTFT in the final evidence because both failed before
+generation.
 
 ## Memory And VRAM Analysis
 
 The final machine has a CUDA-visible RTX 3050 Laptop GPU with 4.0 GiB VRAM. The baseline rows
-record about 2.9 GB CUDA peak allocation. The dynamic-int8 rows record 0.0 MB VRAM because the
-successful quantized path runs on CPU.
+record about 4.0 GB CUDA peak allocation. The quantized rows do not record RAM or VRAM generation
+metrics because the run stops during the load-stage memory guard.
 
 Important limitations:
 
 - RAM is sampled periodically, so short spikes can be missed.
 - Tokenizer and model internals can allocate memory outside the measured generation window.
-- Baseline and dynamic-int8 do not use the same backend, so VRAM comparisons must be read by
-  execution path rather than as an apples-to-apples GPU comparison.
+- Baseline and dynamic-int8 do not use the same backend, and the final quantized run did not
+  reach generation, so no speed or memory comparison can be made for quantized 7B inference.
 - AirLLM memory benefit cannot be measured for generation because generation never started.
 
 ## Cost Analysis: On-Premises Versus API
@@ -313,10 +315,10 @@ Cost curve summary:
 
 | Monthly requests | API cost USD | Local cost USD | API/request USD | Local/request USD |
 | ---: | ---: | ---: | ---: | ---: |
-| 100 | 0.001695 | 43.347476 | 0.00001695 | 0.43347476 |
-| 1000 | 0.016950 | 43.474760 | 0.00001695 | 0.04347476 |
-| 10000 | 0.169500 | 44.747599 | 0.00001695 | 0.00447476 |
-| 100000 | 1.695000 | 57.475993 | 0.00001695 | 0.00057476 |
+| 100 | 0.001695 | 43.561356 | 0.00001695 | 0.43561356 |
+| 1000 | 0.016950 | 45.613560 | 0.00001695 | 0.04561356 |
+| 10000 | 0.169500 | 66.135600 | 0.00001695 | 0.00661356 |
+| 100000 | 1.695000 | 271.355997 | 0.00001695 | 0.00271356 |
 
 No break-even point appears in the configured request volumes. The local cost is dominated by
 hardware amortization and maintenance, while the API cost remains tiny for the short prompts
@@ -339,14 +341,13 @@ Observed samples:
 
 - Baseline prompt 0 started a relevant explanation of prefill in local LLM inference.
 - Baseline prompt 1 correctly described paging as memory management using external storage.
-- Quantized prompt 1 also stayed on topic and explained paging for a model that exceeds VRAM.
-- Quantized prompt 0 was less clean: it drifted into a generic "missing value in data" phrasing.
+- AirLLM produced no generated text in the final run.
+- Quantized produced no generated text in the final run.
 
 Conclusion:
 
-Dynamic-int8 remained usable for short explanatory prompts, but the sample is too small to
-claim broad quality preservation. The assignment-relevant conclusion is that quantization
-improved speed in this run while requiring manual quality review.
+Only baseline output quality can be reviewed for the current final 7B evidence. AirLLM and
+quantized quality are unavailable because neither path reached generation.
 
 ## Original Extension
 
@@ -376,7 +377,7 @@ The project is organized as a Python package under `src/airllm_ex05/`.
 | `benchmark.py` | JSON/CSV result persistence |
 | `runners/baseline_runner.py` | Direct Transformers inference |
 | `runners/airllm_runner.py` | AirLLM loading, shard path, and generation attempt |
-| `runners/quantized_runner.py` | `bitsandbytes` and CPU dynamic-int8 paths |
+| `runners/quantized_runner.py` | `bitsandbytes`, CPU dynamic-int8, and memory-guard paths |
 | `cost_analysis.py` | API/local cost comparison and break-even scan |
 | `plotting.py` | Latency, throughput, memory, and cost figures |
 | `report.py` | Generated Markdown report support |
@@ -424,18 +425,19 @@ Ignored heavy/private artifacts:
 - Cost power values are assumptions, not watt-meter readings.
 - AirLLM failed before generation, so AirLLM generation metrics are unavailable.
 - Package compatibility can change with future versions.
-- The final comparison is not a clean GPU-versus-GPU benchmark: baseline recorded CUDA
-  allocation, while dynamic-int8 used CPU quantization.
+- The final comparison is not a clean three-way latency benchmark because AirLLM and quantized
+  failed before generation.
 
 ## Troubleshooting
 
 - **Missing `transformers`**: run `uv sync --extra models`.
 - **AirLLM failure**: inspect the generated failed result rows; failed runs are part of the
   evidence.
-- **Windows quantization limits**: use `dynamic_int8`; `bitsandbytes` may be unavailable or
-  unsuitable on Windows.
-- **Out of memory**: lower `max_new_tokens`, validate with a tiny model, then run the bounded
-  stress model.
+- **Windows quantization limits**: `dynamic_int8` is implemented, but the 7B model can still
+  exceed RAM during conversion. Use a smaller model for a successful local quantized run, or use
+  a supported native low-bit backend such as `bitsandbytes` on a suitable CUDA/Linux setup.
+- **Out of memory**: lower `max_new_tokens`, validate with a tiny model, then rerun the
+  configured 7B stress model and preserve any structured failure rows as evidence.
 - **Disk pressure**: Hugging Face caches and AirLLM shards can be large; keep them on a disk
   with sufficient free space.
 
@@ -453,10 +455,10 @@ quantized execution, measures TTFT/TPOT/throughput/latency/RAM/VRAM where availa
 negative results, generates tables and graphs, performs an API/local cost comparison, and
 connects the findings to Prefill, Decode, VRAM, paging, and quantization.
 
-The strongest finding is not that one method is universally best. The actual result is more
+The strongest finding is not that one method is universally best. The actual 7B result is more
 engineering-realistic: direct local Transformers inference works but is slow, AirLLM can fail
-despite successful shard creation, and CPU dynamic-int8 quantization is a practical speed
-improvement for this bounded local run.
+before generation, and CPU dynamic-int8 can be infeasible on a 16 GiB RAM laptop even when the
+checkpoint is cached locally.
 
 ## License And Credits
 

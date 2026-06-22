@@ -75,21 +75,23 @@ Metrics store:
 
 - Every invoked runner produces one result per configured prompt/run.
 - Load failures produce failed rows for every configured prompt/run.
+- Pre-load guard failures produce failed rows for every configured prompt/run.
 - Generation failures preserve prompt/run context.
 - Successful rows include latency and token-derived metrics.
+- Failed rows leave unavailable metrics empty rather than fabricating values.
 - Analysis can process failed and successful rows together.
-- The final comparison table includes AirLLM failed rows.
+- The final comparison table includes AirLLM and quantized failed rows.
 
 ## Final Evidence
 
 Current processed evidence contains:
 
 - 6 raw benchmark rows.
-- 4 successful rows.
-- 2 failed rows.
+- 2 successful rows.
+- 4 failed rows.
 - 2 baseline successes.
-- 2 quantized successes.
 - 2 AirLLM failures.
+- 2 quantized dynamic-int8 `MemoryError` failures.
 
 ## Risks
 
@@ -97,8 +99,10 @@ Current processed evidence contains:
 - RAM sampling can miss short peaks.
 - TTFT is only available for streaming paths.
 - AirLLM metrics are unavailable if AirLLM fails before generation.
+- Quantized metrics are unavailable if the dynamic-int8 memory guard stops before generation.
 - CPU-only machines cannot provide real CUDA/VRAM measurements; this final run did have a
-  CUDA-visible 4.0 GiB laptop GPU, while the dynamic-int8 quantized path ran on CPU.
+  CUDA-visible 4.0 GiB laptop GPU, while the final dynamic-int8 quantized path failed before
+  generation.
 - Very slow local generation can make large repeated experiments impractical.
 
 ## Implementation Notes
@@ -109,3 +113,4 @@ Current processed evidence contains:
 - Runner shared code: `src/airllm_ex05/runners/common.py`
 - Analysis/report: `src/airllm_ex05/report.py`
 - Tests: `tests/test_benchmark.py`, `tests/test_metrics.py`, `tests/test_report.py`
+- Quantized guard tests: `tests/test_quantized_guard.py`

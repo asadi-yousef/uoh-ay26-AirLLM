@@ -12,11 +12,16 @@ def test_cli_hardware_smoke(tmp_path: Path) -> None:
 
 def test_cli_baseline_saves_failed_results(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
+    raw_dir = tmp_path / "results" / "raw"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "baseline_p9_r9.json").write_text("stale", encoding="utf-8")
+    (raw_dir / "baseline_results.csv").write_text("stale", encoding="utf-8")
 
     assert main(["baseline", "--config", str(config_path)]) == 0
-    raw_dir = tmp_path / "results" / "raw"
     assert list(raw_dir.glob("baseline_p*_r*.json"))
+    assert not (raw_dir / "baseline_p9_r9.json").exists()
     assert (raw_dir / "baseline_results.csv").exists()
+    assert (raw_dir / "baseline_results.csv").read_text(encoding="utf-8") != "stale"
 
 
 def _write_config(tmp_path: Path) -> Path:

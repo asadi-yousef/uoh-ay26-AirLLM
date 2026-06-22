@@ -57,9 +57,9 @@ introduced different bottlenecks on my hardware.
 ## Final Observed Evidence
 
 - AirLLM imported successfully after dependency work.
-- AirLLM created 76 layer-shard files.
-- The layer-shard files totaled about 6.17 GB.
-- AirLLM then failed with `IndexError: list index out of range`.
+- AirLLM imported successfully for the configured 7B model.
+- AirLLM then failed before generation with
+  `AttributeError: 'str' object has no attribute 'shape'`.
 - Both final AirLLM prompt results are failed rows.
 - No AirLLM generation latency, TTFT, TPOT, throughput, or output quality can be claimed.
 
@@ -82,6 +82,6 @@ introduced different bottlenecks on my hardware.
 
 ## Report Requirements
 
-The report must state that AirLLM was attempted, shard creation happened, and generation did
-not happen. It must not compare AirLLM speed against baseline because there are no successful
-AirLLM generation metrics in the final evidence.
+The report must state that AirLLM was attempted and generation did not happen. It must not
+compare AirLLM speed against baseline because there are no successful AirLLM generation metrics
+in the final evidence.

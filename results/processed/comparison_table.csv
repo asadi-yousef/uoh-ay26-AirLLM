@@ -1,7 +1,7 @@
 error_message,error_type,input_tokens,load_time_seconds,model_name,output_tokens,peak_ram_mb,peak_vram_mb,prompt_index,run_index,runner,status,time_per_output_token_seconds,time_to_first_token_seconds,tokens_per_second,total_latency_seconds
-list index out of range,IndexError,,,Qwen/Qwen2.5-3B-Instruct,,,,0,0,airllm,failed,,,,
-list index out of range,IndexError,,,Qwen/Qwen2.5-3B-Instruct,,,,1,0,airllm,failed,,,,
-,,11,45.06706059999988,Qwen/Qwen2.5-3B-Instruct,22,4734.62,2899.59,0,0,baseline,success,1.107678659090921,7.821629099999882,0.9027889016302856,24.36893050000026
-,,14,45.06706059999988,Qwen/Qwen2.5-3B-Instruct,29,4744.74,2899.7,1,0,baseline,success,0.6093162551724163,1.1699012000003677,1.6411838540513468,17.670171400000072
-,,11,101.55861569999979,Qwen/Qwen2.5-3B-Instruct,25,4569.58,0.0,0,0,quantized,success,0.40724453999999244,5.479136399999788,2.4555270894485624,10.18111349999981
-,,14,101.55861569999979,Qwen/Qwen2.5-3B-Instruct,27,4592.52,0.0,1,0,quantized,success,0.1611267481481533,0.34337449999975433,6.206294184504468,4.350422200000139
+'str' object has no attribute 'shape',AttributeError,,,Qwen/Qwen2.5-7B-Instruct,,,,0,0,airllm,failed,,,,
+'str' object has no attribute 'shape',AttributeError,,,Qwen/Qwen2.5-7B-Instruct,,,,1,0,airllm,failed,,,,
+,,11,353.1248332,Qwen/Qwen2.5-7B-Instruct,22,5754.13,4023.98,0,0,baseline,success,10.305232027272723,17.022104100000206,0.0970380868042085,226.7151045999999
+,,14,353.1248332,Qwen/Qwen2.5-7B-Instruct,30,5707.85,4024.15,1,0,baseline,success,7.644340743333335,15.128969000000097,0.13081572807597627,229.33022230000006
+"dynamic_int8 quantization would likely exceed local RAM before results can be serialized: cached checkpoint is 14.2 GiB, physical RAM is 15.7 GiB, estimated requirement is 31.9 GiB. Use a smaller model, a native low-bit backend such as bitsandbytes on a supported CUDA/Linux environment, or preserve this structured failure as the 7B quantized result.",MemoryError,,,Qwen/Qwen2.5-7B-Instruct,,,,0,0,quantized,failed,,,,
+"dynamic_int8 quantization would likely exceed local RAM before results can be serialized: cached checkpoint is 14.2 GiB, physical RAM is 15.7 GiB, estimated requirement is 31.9 GiB. Use a smaller model, a native low-bit backend such as bitsandbytes on a supported CUDA/Linux environment, or preserve this structured failure as the 7B quantized result.",MemoryError,,,Qwen/Qwen2.5-7B-Instruct,,,,1,0,quantized,failed,,,,

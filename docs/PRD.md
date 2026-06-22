@@ -36,7 +36,8 @@ In scope:
 - Hardware collection for the local machine.
 - Baseline Hugging Face Transformers inference.
 - AirLLM inference attempt with layer-shard path support.
-- Quantized inference attempt with `bitsandbytes` and CPU dynamic-int8 support.
+- Quantized inference attempt with `bitsandbytes`, CPU dynamic-int8 support, and a memory guard
+  for oversized local dynamic-int8 conversion.
 - Structured success and failure records.
 - JSON and CSV result serialization.
 - Processed comparison table.
@@ -129,7 +130,9 @@ Secondary users:
 - Support CPU `torch.dynamic_int8` for Windows CPU validation.
 - Preserve missing backend errors as structured failures.
 - Include quantization method metadata in successful results.
-- Compare memory, speed, and output quality against baseline.
+- Compare memory, speed, and output quality against baseline only when quantized generation
+  succeeds.
+- Preserve dynamic-int8 RAM-pressure failures as structured load-stage evidence.
 
 ### Analysis And Report
 
@@ -157,13 +160,13 @@ Secondary users:
 
 The final bounded stress experiment is configured as:
 
-- Model: `Qwen/Qwen2.5-3B-Instruct`
+- Model: `Qwen/Qwen2.5-7B-Instruct`
 - Prompts: two conceptual prompts about Prefill/Decode and paging
 - Runs: one per prompt
 - Output length: 16 max new tokens
 - Hardware: Windows 11 laptop with 15.70 GiB RAM and an RTX 3050 Laptop GPU visible to CUDA
 - Quantization: CPU dynamic-int8
-- AirLLM cache: `airllm_cache/layer_shards`
+- AirLLM cache: `airllm_cache/qwen2_5_7b/layer_shards`
 
 This model was selected because it is large enough to be slow and uncomfortable on the target
 machine while remaining bounded enough to complete a short experiment.
@@ -215,18 +218,21 @@ machine while remaining bounded enough to complete a short experiment.
 - Hardware: Windows 11, 4 physical cores, 8 logical cores, 15.70 GiB RAM, NVIDIA GeForce
   RTX 3050 Laptop GPU, 4.0 GiB VRAM, CUDA available.
 - Baseline: succeeded on both final prompts but slowly.
-- AirLLM: imported and created 76 layer-shard files totaling about 6.17 GB, then failed with
-  `IndexError: list index out of range`.
-- Quantized: succeeded on both prompts with CPU dynamic-int8.
-- Analysis: 6 raw results, 4 successes, 2 failures.
+- AirLLM: imported for the 7B run, then failed before generation with
+  `AttributeError: 'str' object has no attribute 'shape'`.
+- Quantized: failed on both prompts with load-stage `MemoryError` from the dynamic-int8 memory
+  guard.
+- Analysis: 6 raw results, 2 successes, 4 failures.
 - Cost model: no break-even within configured monthly request volumes.
 
 ## Risks
 
 - AirLLM compatibility can vary by version and model architecture.
-- CPU inference can be too slow for larger models, and a 4 GiB laptop GPU is still too small
-  for comfortable large-model experimentation.
+- CPU inference can be too slow for 7B-class models, and a 4 GiB laptop GPU is too small
+  for comfortable unquantized large-model experimentation.
 - `bitsandbytes` may not work on Windows or CPU-only machines.
+- CPU dynamic-int8 can temporarily need more RAM than the compressed model footprint and can be
+  infeasible for a 7B model on a 16 GiB RAM laptop.
 - Python 3.12 was used for the final hardware snapshot; Python 3.13 may be ahead of some ML
   package support if the project is run elsewhere.
 - Approximate token counts can differ from tokenizer-true counts.
@@ -251,6 +257,7 @@ generation, CLI smoke paths, and runner success/failure behavior with mocked hea
 - `runners/baseline_runner.py`: direct Transformers path.
 - `runners/airllm_runner.py`: AirLLM path.
 - `runners/quantized_runner.py`: quantized path.
+- `tests/test_quantized_guard.py`: dynamic-int8 cache-size and memory-guard behavior.
 - `cost_analysis.py`: API/local economics.
 - `plotting.py`: figures.
 - `report.py`: report generation.

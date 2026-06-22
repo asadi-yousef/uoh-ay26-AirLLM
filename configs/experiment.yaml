@@ -1,9 +1,9 @@
 # Default final experiment for Exercise 05.
-# Qwen2.5-3B-Instruct is large enough to stress CPU-only local inference,
-# has a sharded SafeTensors index needed by AirLLM, and remains bounded
-# enough for a short 16-token experiment on a 16 GiB RAM laptop.
+# Qwen2.5-7B-Instruct is the stress model for the 16 GiB RAM / 4 GiB VRAM
+# laptop. It is intentionally too large to fit comfortably in local GPU memory,
+# so baseline failure or severe slowness is an expected and useful result.
 model:
-  name: "Qwen/Qwen2.5-3B-Instruct"
+  name: "Qwen/Qwen2.5-7B-Instruct"
   cache_dir: "model_cache/huggingface"
   trust_remote_code: false
   device: "auto"
@@ -30,7 +30,7 @@ baseline:
 airllm:
   enabled: true
   mode: "airllm"
-  layer_shards_saving_path: "airllm_cache/layer_shards"
+  layer_shards_saving_path: "airllm_cache/qwen2_5_7b/layer_shards"
 
 quantization:
   enabled: true

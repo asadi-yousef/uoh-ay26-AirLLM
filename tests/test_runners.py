@@ -157,6 +157,10 @@ def test_quantized_missing_transformers_returns_failures(monkeypatch) -> None:
 
 def test_quantized_success_with_fakes(monkeypatch) -> None:
     monkeypatch.setattr("importlib.import_module", _fake_import)
+    monkeypatch.setattr(
+        "airllm_ex05.runners.quantized_runner._raise_if_dynamic_int8_too_large",
+        lambda _config: None,
+    )
     config = load_config("configs/experiment.yaml")
 
     results = run_quantized(config)

@@ -134,11 +134,11 @@ as planned evidence, not removed from the record.
 - [x] Validate config through tests.
 - [x] Keep config file human-editable.
 - [x] Keep final config bounded enough for a short constrained-local run.
-- [x] Set final model to `Qwen/Qwen2.5-3B-Instruct`.
+- [x] Set final stress model to `Qwen/Qwen2.5-7B-Instruct`.
 - [x] Set final prompts to one Prefill/Decode prompt and one paging prompt.
 - [x] Set final max new tokens to 16.
 - [x] Set final run count to 1.
-- [x] Set final AirLLM shard path to `airllm_cache/layer_shards`.
+- [x] Set final AirLLM shard path to `airllm_cache/qwen2_5_7b/layer_shards`.
 - [x] Set final quantization mode to `dynamic_int8`.
 - [x] Preserve `bitsandbytes` settings for CUDA-capable environments.
 
@@ -251,7 +251,7 @@ as planned evidence, not removed from the record.
 - [x] Save generated samples.
 - [x] Save structured failures when dependencies or model loading fail.
 - [x] Add tests with fake model/tokenizer objects.
-- [x] Run final baseline on Qwen2.5-3B.
+- [x] Run final baseline on Qwen2.5-7B.
 - [x] Record two successful baseline results.
 - [x] Record baseline prompt 0 success.
 - [x] Record baseline prompt 1 success.
@@ -270,13 +270,11 @@ as planned evidence, not removed from the record.
 - [x] Keep AirLLM shards out of Git.
 - [x] Add tests for missing AirLLM dependency.
 - [x] Add tests for fake AirLLM success.
-- [x] Run final AirLLM command on Qwen2.5-3B.
+- [x] Run final AirLLM command on Qwen2.5-7B.
 - [x] Resolve dependency issues far enough for AirLLM to import.
 - [x] Confirm AirLLM created layer shards.
-- [x] Record 76 shard files.
-- [x] Record shard size at about 6.17 GB.
 - [x] Record final AirLLM internal failure.
-- [x] Preserve `IndexError: list index out of range` in raw results.
+- [x] Preserve `AttributeError: 'str' object has no attribute 'shape'` in raw results.
 - [x] Treat the AirLLM result as a negative compatibility finding.
 - [x] Explain AirLLM through paging and disk I/O in report docs.
 
@@ -296,14 +294,14 @@ as planned evidence, not removed from the record.
 - [x] Document previous 4-bit failure on the observed Windows hardware.
 - [x] Switch final config to CPU dynamic-int8.
 - [x] Run final dynamic-int8 quantized benchmark.
-- [x] Record two successful quantized results.
-- [x] Record quantized prompt 0 success.
-- [x] Record quantized prompt 1 success.
-- [x] Compare latency against baseline.
-- [x] Compare throughput against baseline.
-- [x] Compare RAM observations against baseline.
-- [x] Review generated text quality manually.
-- [x] Document that dynamic-int8 improved speed but measured process RSS was not lower.
+- [x] Record two structured quantized failure results for the final 7B run.
+- [x] Record quantized prompt 0 load-stage `MemoryError`.
+- [x] Record quantized prompt 1 load-stage `MemoryError`.
+- [x] Document that quantized latency is unavailable for the final 7B run.
+- [x] Document that quantized throughput is unavailable for the final 7B run.
+- [x] Document that quantized RAM/VRAM generation metrics are unavailable for the final 7B run.
+- [x] Document that quantized output quality is unavailable because generation did not start.
+- [x] Document that dynamic-int8 was stopped by the memory guard on the final 7B run.
 
 ## 12. CLI
 
@@ -335,8 +333,8 @@ as planned evidence, not removed from the record.
 - [x] Commit final comparison table for tabular evidence.
 - [x] Add tests for report and analysis generation.
 - [x] Verify final analysis count: 6 raw results.
-- [x] Verify final success count: 4.
-- [x] Verify final failure count: 2.
+- [x] Verify final success count: 2.
+- [x] Verify final failure count: 4.
 - [x] Verify final cost analysis has no break-even in configured volumes.
 
 ## 14. Cost Model
@@ -360,7 +358,7 @@ as planned evidence, not removed from the record.
 
 ## 15. Final Experiment Evidence
 
-- [x] Use `Qwen/Qwen2.5-3B-Instruct`.
+- [x] Use `Qwen/Qwen2.5-7B-Instruct`.
 - [x] Use two prompts.
 - [x] Use one run per prompt.
 - [x] Use 16 max new tokens.
@@ -374,9 +372,9 @@ as planned evidence, not removed from the record.
 - [x] Record final comparison CSV.
 - [x] Record AirLLM failures as raw JSON.
 - [x] Record baseline successes as raw JSON.
-- [x] Record quantized successes as raw JSON.
+- [x] Record quantized failures as raw JSON.
 - [x] Record final baseline load time from processed evidence.
-- [x] Record final quantized load time from processed evidence.
+- [x] Record final quantized load-stage failure from processed evidence.
 - [x] Record final AirLLM error from raw evidence.
 - [x] Record final cost-analysis output.
 - [x] Preserve the fact that raw evidence changed between runs if regenerated.
@@ -420,7 +418,7 @@ as planned evidence, not removed from the record.
 - [x] Confirm all final numeric values in `docs/REPORT.md` match current raw/processed files.
 - [x] Confirm AirLLM shard count and size are documented as observed local evidence.
 - [x] Confirm no claim says AirLLM generated text in the final run.
-- [x] Confirm no claim says dynamic-int8 reduced RAM when measured RSS increased.
+- [x] Confirm no claim says dynamic-int8 reduced RAM or improved speed in the final 7B run.
 - [ ] Confirm output quality observations are based on actual generated text.
 - [ ] Confirm cost conclusions are tied to configured assumptions.
 - [ ] Confirm every negative result is described as observed evidence, not speculation.
@@ -432,9 +430,10 @@ as planned evidence, not removed from the record.
 - [x] Token counting is approximate rather than tokenizer-exact.
 - [x] AirLLM TTFT is unavailable because AirLLM failed before generation.
 - [x] Peak RAM sampling can miss short-lived memory spikes.
-- [x] CUDA VRAM metrics are available for paths that use CUDA; dynamic-int8 CPU rows record
-      zero VRAM allocation.
-- [x] `bitsandbytes` was not the final successful quantization backend on Windows.
+- [x] CUDA VRAM metrics are available for paths that use CUDA; final dynamic-int8 rows have no
+      VRAM metric because generation did not start.
+- [x] `bitsandbytes` was not the final quantization backend on Windows.
+- [x] CPU dynamic-int8 was implemented but did not complete for the final 7B run.
 - [x] Python 3.12 was used for the final model run; Python 3.13 may not be ideal for every ML
       package even though tooling can run.
 - [x] The final experiment is intentionally bounded and short to complete on local hardware.
@@ -511,24 +510,25 @@ as planned evidence, not removed from the record.
 - [x] Preserve `runner=quantized` rows.
 - [x] Preserve `status=success` rows.
 - [x] Preserve `status=failed` rows.
-- [x] Preserve `model_name=Qwen/Qwen2.5-3B-Instruct`.
+- [x] Preserve `model_name=Qwen/Qwen2.5-7B-Instruct` in final result files.
 - [x] Preserve prompt index 0.
 - [x] Preserve prompt index 1.
 - [x] Preserve run index 0.
-- [x] Preserve AirLLM `IndexError`.
-- [x] Preserve AirLLM `list index out of range` message.
+- [x] Preserve AirLLM `AttributeError`.
+- [x] Preserve AirLLM `'str' object has no attribute 'shape'` message.
 - [x] Preserve baseline load-time metric.
 - [x] Preserve baseline latency metrics.
 - [x] Preserve baseline TTFT metrics.
 - [x] Preserve baseline TPOT metrics.
 - [x] Preserve baseline throughput metrics.
 - [x] Preserve baseline RAM metrics.
-- [x] Preserve quantized load-time metric.
-- [x] Preserve quantized latency metrics.
-- [x] Preserve quantized TTFT metrics.
-- [x] Preserve quantized TPOT metrics.
-- [x] Preserve quantized throughput metrics.
-- [x] Preserve quantized RAM metrics.
+- [x] Preserve quantized `MemoryError` failure rows.
+- [x] Preserve quantized load-stage metadata.
+- [x] Preserve quantized unavailable latency metrics as empty values.
+- [x] Preserve quantized unavailable TTFT metrics as empty values.
+- [x] Preserve quantized unavailable TPOT metrics as empty values.
+- [x] Preserve quantized unavailable throughput metrics as empty values.
+- [x] Preserve quantized unavailable RAM metrics as empty values.
 - [x] Preserve `break_even_monthly_requests: null`.
 - [x] Preserve cost points for 100 requests.
 - [x] Preserve cost points for 1000 requests.
