@@ -14,19 +14,33 @@ from airllm_ex05.models import BenchmarkResult
 
 def plot_metric(results: list[BenchmarkResult], metric_name: str, output_path: Path) -> Path | None:
     """Create a bar chart for a benchmark metric."""
-    values = []
-    labels = []
+    grouped: dict[str, list[float]] = {}
     for result in results:
+        grouped.setdefault(result.runner, [])
         value = getattr(result.metrics, metric_name)
-        if value is None:
-            continue
-        labels.append(result.runner)
-        values.append(value)
-    if not values:
+        if value is not None:
+            grouped[result.runner].append(value)
+    if not grouped:
         return None
+    labels = list(grouped)
+    values = [
+        sum(metric_values) / len(metric_values) if metric_values else 0.0
+        for metric_values in grouped.values()
+    ]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(8, 4))
-    plt.bar(labels, values)
+    bars = plt.bar(labels, values)
+    for bar, metric_values in zip(bars, grouped.values(), strict=True):
+        if metric_values:
+            continue
+        bar.set_hatch("//")
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            0,
+            "N/A",
+            ha="center",
+            va="bottom",
+        )
     plt.ylabel(metric_name.replace("_", " "))
     plt.xlabel("runner")
     plt.tight_layout()
