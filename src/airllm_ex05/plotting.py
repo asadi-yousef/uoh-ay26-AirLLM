@@ -11,6 +11,20 @@ import matplotlib.pyplot as plt
 from airllm_ex05.cost_analysis import CostPoint
 from airllm_ex05.models import BenchmarkResult
 
+METRIC_LABELS = {
+    "peak_ram_mb": "peak RAM usage (MB)",
+    "peak_vram_mb": "CUDA/offload memory metric (MB)",
+    "tokens_per_second": "output tokens per second",
+    "total_latency_seconds": "total latency (seconds)",
+}
+
+METRIC_TITLES = {
+    "peak_ram_mb": "Average peak RAM usage",
+    "peak_vram_mb": "Average CUDA/offload memory metric",
+    "tokens_per_second": "Average throughput",
+    "total_latency_seconds": "Average latency",
+}
+
 
 def plot_metric(results: list[BenchmarkResult], metric_name: str, output_path: Path) -> Path | None:
     """Create a bar chart for a benchmark metric."""
@@ -30,7 +44,8 @@ def plot_metric(results: list[BenchmarkResult], metric_name: str, output_path: P
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(8, 4))
     plt.bar(labels, values)
-    plt.ylabel(metric_name.replace("_", " "))
+    plt.title(METRIC_TITLES.get(metric_name, metric_name.replace("_", " ")))
+    plt.ylabel(METRIC_LABELS.get(metric_name, metric_name.replace("_", " ")))
     plt.xlabel("runner")
     plt.tight_layout()
     plt.savefig(output_path)

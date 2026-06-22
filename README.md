@@ -14,8 +14,8 @@ This repository implements a reproducible local LLM experiment for three executi
 
 The repository is configured and documented for the final 7B stress run with
 `Qwen/Qwen2.5-7B-Instruct` on a constrained Windows laptop with 15.70 GiB RAM and an
-NVIDIA GeForce RTX 3050 Laptop GPU with 4.0 GiB VRAM visible to CUDA. The experiment uses two
-prompts, one run per prompt, and `max_new_tokens: 16`.
+NVIDIA GeForce RTX 3050 Laptop GPU with 4.0 GiB dedicated VRAM visible to CUDA. The experiment
+uses two prompts, one run per prompt, and `max_new_tokens: 16`.
 
 Current 7B result:
 
@@ -34,6 +34,11 @@ The strongest performance result is the quantized runner: it produced the highes
 and lowest latency in the final 7B run. AirLLM is valuable as a paging-style demonstration, but
 on this machine it is slower than direct Transformers inference because layer movement and disk
 I/O dominate the short generation workload.
+
+Memory note: the committed CUDA/offload memory values are runner-level memory indicators gathered
+from the execution stack. For the bitsandbytes CPU-offload run, the 8.32 GiB value should not be
+interpreted as pure dedicated VRAM residency, because the physical GPU has only 4 GB dedicated
+VRAM.
 
 ## Hardware And Model Choice
 
@@ -54,7 +59,7 @@ Final observed hardware:
 | Logical cores | 8 |
 | RAM | 15.70 GiB |
 | GPU | NVIDIA GeForce RTX 3050 Laptop GPU |
-| VRAM | 4.0 GiB |
+| Dedicated GPU VRAM | 4.0 GiB |
 | CUDA available | true |
 | Storage | NTFS/FAT32 local partitions, about 932.68 GB each |
 
@@ -147,7 +152,7 @@ Processed evidence from `results/processed/comparison_table.csv`.
 Current committed values should be regenerated from `results/processed/comparison_table.csv`
 and the figures under `results/figures/` after each fresh 7B workflow run.
 
-| Runner | Status | Prompt | Load s | Latency s | TTFT s | TPOT s/token | Tok/s | Peak RAM MB | Peak VRAM MB |
+| Runner | Status | Prompt | Load s | Latency s | TTFT s | TPOT s/token | Tok/s | Peak RAM MB | CUDA/offload memory MB |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | airllm | success | 0 | 4.31 | 446.69 |  | 20.30 | 0.05 | 6373.56 | 1094.48 |
 | airllm | success | 1 | 4.31 | 443.91 |  | 14.80 | 0.07 | 3943.98 | 1099.13 |
@@ -182,7 +187,7 @@ AirLLM, and quantized metrics from the final 7B run.
 
 ![Throughput comparison](results/figures/throughput.png)
 
-![Peak RAM comparison](results/figures/memory.png)
+![Average peak RAM usage](results/figures/memory.png)
 
 ![Cost curve](results/figures/cost_curve.png)
 
@@ -190,7 +195,7 @@ AirLLM, and quantized metrics from the final 7B run.
 
 The baseline runner uses Transformers `AutoTokenizer` and `AutoModelForCausalLM`. The config
 uses `device: auto`, so Transformers/Accelerate chooses the placement. The result recorded
-about 4.0 GB CUDA peak allocation, which means this baseline was not CPU-only.
+about a 4.0 GB CUDA/offload runtime memory metric, which means this baseline was not CPU-only.
 
 Observed 7B baseline behavior:
 
@@ -252,7 +257,7 @@ Observed quantized behavior:
 - Prompt latency was about 74.73 to 112.09 seconds.
 - Throughput ranged from 0.20 to 0.40 output tokens per second.
 - TTFT ranged from 6.62 to 32.37 seconds.
-- CUDA peak allocation was about 8.32 GiB with Accelerate CPU offload.
+- The CUDA/offload runtime memory metric was about 8.32 GiB with Accelerate CPU offload.
 
 Interpretation:
 
@@ -280,14 +285,22 @@ The project measures:
 The baseline and quantized paths use streaming generation when available, so TTFT is measured
 directly for those rows. AirLLM succeeded, but its current integration does not expose the same
 streaming callback path, so AirLLM TTFT remains unavailable while latency, TPOT, throughput, RAM,
-and VRAM are available.
+and CUDA/offload memory indicators are available.
 
-## Memory And VRAM Analysis
+## Memory And CUDA/Offload Analysis
 
-The final machine has a CUDA-visible RTX 3050 Laptop GPU with 4.0 GiB VRAM. The baseline rows
-record about 4.0 GB CUDA peak allocation. The quantized bitsandbytes rows record about 8.32 GB
-CUDA peak allocation because Accelerate offloads part of the model across CPU/GPU memory rather
-than keeping a simple 4 GiB-only footprint.
+The final machine has a CUDA-visible RTX 3050 Laptop GPU with 4.0 GiB dedicated physical VRAM
+and 15.70 GiB host RAM. The benchmark records host RAM separately from the CUDA/offload runtime
+memory metric in the comparison table. The baseline rows record about a 4.0 GB CUDA/offload
+runtime memory metric. The quantized bitsandbytes rows record about 8.32 GB for that same
+runner-level metric because Accelerate CPU offload can move part of the model/state through CPU
+memory and CUDA/offload paths rather than keeping a simple 4 GiB-only GPU footprint.
+
+The CUDA/offload memory column is a runner-level memory indicator gathered from the execution
+stack. For the bitsandbytes CPU-offload run, it should not be interpreted as pure dedicated VRAM
+residency, because the physical GPU has only 4 GB dedicated VRAM. The exact composition of this
+runtime indicator is backend-dependent, so it is safest to read it as measured execution-stack
+memory pressure rather than as physical GPU residency.
 
 Important limitations:
 
@@ -381,7 +394,7 @@ The project is organized as a Python package under `src/airllm_ex05/`.
 | `config.py` | YAML config parsing, validation, and path resolution |
 | `models.py` | Hardware, metric, and benchmark result schemas |
 | `hardware.py` | OS, CPU, RAM, GPU, CUDA, VRAM, and storage snapshot |
-| `metrics.py` | Token estimates, throughput, TPOT, RAM sampler, CUDA peak memory |
+| `metrics.py` | Token estimates, throughput, TPOT, RAM sampler, CUDA/offload memory metric |
 | `benchmark.py` | JSON/CSV result persistence |
 | `runners/baseline_runner.py` | Direct Transformers inference |
 | `runners/airllm_runner.py` | AirLLM loading, shard path, and generation attempt |
@@ -457,8 +470,8 @@ are captured. Recommended screenshots are listed in the final notes of the submi
 
 This repository satisfies the assignment as an engineering experiment. It documents the
 hardware, chooses and justifies a locally uncomfortable model, runs baseline/AirLLM/quantized
-execution, measures TTFT/TPOT/throughput/latency/RAM/VRAM where available, generates tables and
-graphs, performs an API/local cost comparison, and
+execution, measures TTFT/TPOT/throughput/latency/RAM/CUDA-offload memory where available,
+generates tables and graphs, performs an API/local cost comparison, and
 connects the findings to Prefill, Decode, VRAM, paging, and quantization.
 
 The strongest finding is not that one method is universally best. The actual 7B result is more

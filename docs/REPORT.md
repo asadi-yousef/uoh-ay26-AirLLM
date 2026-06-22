@@ -11,7 +11,7 @@ quantized run to bitsandbytes 8-bit loading with CPU offload.
 
 The final hardware snapshot is stored in `results/raw/hardware.json`. The observed machine is a
 Windows 11 laptop with 4 physical CPU cores, 8 logical CPU cores, 15.70 GiB RAM, and an NVIDIA
-GeForce RTX 3050 Laptop GPU with 4.0 GiB CUDA-visible VRAM.
+GeForce RTX 3050 Laptop GPU with 4.0 GiB dedicated VRAM visible to CUDA.
 
 ## Measurements
 
@@ -31,7 +31,7 @@ Comparison tables are generated under `results/processed/`; plots are generated 
 The baseline runner uses `AutoTokenizer` and `AutoModelForCausalLM` with `device: auto`. In the
 current evidence both baseline prompts succeeded. Model load took about 16.64 seconds, prompt
 latency was about 210.26 to 216.45 seconds, throughput was about 0.10 to 0.14 output tokens per
-second, and CUDA peak allocation was about 4.0 GiB.
+second, and the CUDA/offload runtime memory metric was about 4.0 GiB.
 
 ## AirLLM Run
 
@@ -49,7 +49,19 @@ The quantized runner supports `bitsandbytes`-style low-bit loading where availab
 bitsandbytes 8-bit loading with fp32 CPU offload because dynamic-int8 conversion was too large
 for local RAM. In the current evidence both quantized prompts succeeded. Load time was about
 54.82 seconds, prompt latency was about 74.73 to 112.09 seconds, throughput was about 0.20 to
-0.40 output tokens per second, and CUDA peak allocation was about 8.32 GiB with CPU offload.
+0.40 output tokens per second, and the CUDA/offload runtime memory metric was about 8.32 GiB.
+This does not mean the quantized model fit inside dedicated GPU memory: the physical RTX 3050
+Laptop GPU has 4.0 GiB dedicated VRAM, and bitsandbytes with Accelerate CPU offload can move
+model/state through host RAM and offload paths.
+
+## Memory Notes
+
+The report separates physical hardware capacity, measured host RAM usage, and the benchmark's
+CUDA/offload memory metric. The CUDA/offload memory column is a runner-level memory indicator
+gathered from the execution stack. For the bitsandbytes CPU-offload run, it should not be
+interpreted as pure dedicated VRAM residency, because the physical GPU has only 4 GB dedicated
+VRAM. Its exact composition is backend-dependent, so the safest reading is measured runtime memory
+pressure across CUDA/offload execution rather than physical GPU residency.
 
 ## Prefill, Decode, TTFT, and TPOT
 
