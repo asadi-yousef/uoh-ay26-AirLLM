@@ -109,8 +109,8 @@ uv run pytest
 Current verification:
 
 - Ruff: passed.
-- Pytest: 33 passed.
-- Coverage: 85.94%, above the configured 85% threshold.
+- Pytest: 35 passed.
+- Coverage: 86.12%, above the configured 85% threshold.
 
 ## Configuration
 
@@ -462,9 +462,19 @@ Ignored heavy/private artifacts:
 
 ## Screenshots
 
-The committed plots above are the primary visual evidence. Additional screenshots for strict
-review should be placed under `docs/screenshots/` and then linked from this README after they
-are captured. Recommended screenshots are listed in the final notes of the submission review.
+The committed plots above are the primary visual evidence. The assignment also asks for
+screenshots in the README, so capture the following final review screenshots before submission
+and save them under `docs/screenshots/`:
+
+| Screenshot | Save as |
+| --- | --- |
+| GitHub README top section showing title, summary, and hardware/model context | `docs/screenshots/01-github-readme-top.png` |
+| GitHub README figures section showing the benchmark plots | `docs/screenshots/02-readme-figures.png` |
+| Local or GitHub view of `results/processed/comparison_table.csv` | `docs/screenshots/03-comparison-table.png` |
+| Terminal output showing `uv run ruff check .` and `uv run pytest` passing | `docs/screenshots/04-ruff-pytest-pass.png` |
+| Optional local raw `hardware.json` view showing CPU/RAM/GPU/VRAM evidence | `docs/screenshots/05-hardware-json.png` |
+
+After capturing them, embed the PNGs in this section with normal Markdown image links.
 
 ## Final Engineering Conclusion
 
@@ -478,6 +488,19 @@ The strongest finding is not that one method is universally best. The actual 7B 
 engineering-realistic: direct local Transformers inference works but is slow, AirLLM succeeds
 with paging but is slower, and bitsandbytes 8-bit offload produces the fastest generation while
 requiring the most careful dependency and memory setup.
+
+## Contribution And Quality Gates
+
+Use `uv` as the package and command runner. Keep source changes modular under `src/`, add or
+update tests under `tests/`, and keep generated private/heavy artifacts out of Git. Before any
+submission or meaningful change, run:
+
+```bash
+uv run ruff check .
+uv run pytest
+```
+
+The project is configured to fail pytest when coverage drops below 85 percent.
 
 ## License And Credits
 

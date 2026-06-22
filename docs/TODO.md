@@ -105,8 +105,8 @@ as planned evidence, not removed from the record.
 - [x] Expand docs after implementation so they represent what was actually planned and done.
 - [ ] Do a final human read-through of every Markdown document.
 - [ ] Confirm links and image paths render correctly on GitHub.
-- [ ] Add final screenshots under `docs/screenshots/` and reference them from README if the
-      evaluator expects screenshots.
+- [ ] Capture final screenshots under `docs/screenshots/` and embed them in README before
+      submission.
 
 ## 4. Configuration System
 
@@ -333,8 +333,8 @@ as planned evidence, not removed from the record.
 - [x] Commit final comparison table for tabular evidence.
 - [x] Add tests for report and analysis generation.
 - [x] Verify final analysis count: 6 raw results.
-- [x] Verify final success count: 2.
-- [x] Verify final failure count: 4.
+- [x] Verify final success count: 6.
+- [x] Verify final failure count: 0.
 - [x] Verify final cost analysis has no break-even in configured volumes.
 
 ## 14. Cost Model
@@ -409,8 +409,7 @@ as planned evidence, not removed from the record.
 - [x] Re-run pytest after this documentation expansion.
 - [x] Record that pytest needs a workspace `--basetemp` on this machine because the default
       AppData temp path is permission-denied.
-- [x] Record that the current full pytest run reports 28 passed and 2 dependency-assumption
-      failures when real `transformers` is installed.
+- [x] Record that the current full pytest run reports 35 passed with 86.12 percent coverage.
 
 ## 17. Report Content Still To Verify Manually
 
@@ -419,12 +418,12 @@ as planned evidence, not removed from the record.
 - [x] Confirm AirLLM shard count and size are documented as observed local evidence.
 - [x] Confirm AirLLM generated text claims match the final successful run.
 - [x] Confirm quantized speed claims are tied to bitsandbytes 8-bit evidence, not dynamic-int8.
-- [ ] Confirm output quality observations are based on actual generated text.
-- [ ] Confirm cost conclusions are tied to configured assumptions.
-- [ ] Confirm historical negative attempts are described as fixed or superseded, not final
+- [x] Confirm output quality observations are based on actual generated text.
+- [x] Confirm cost conclusions are tied to configured assumptions.
+- [x] Confirm historical negative attempts are described as fixed or superseded, not final
       evidence.
-- [ ] Confirm all planned assignment terms are discussed in the final report.
-- [ ] Confirm the README is enough for a fast evaluator scan.
+- [x] Confirm all planned assignment terms are discussed in the final report.
+- [x] Confirm the README is enough for a fast evaluator scan.
 
 ## 18. Known Limitations
 
@@ -458,7 +457,7 @@ as planned evidence, not removed from the record.
 - [x] Final comparison table is present.
 - [x] Heavy artifacts remain ignored.
 - [x] Private PDFs remain ignored.
-- [ ] Git status contains only intended changes.
+- [x] Git status contains only intended changes.
 
 ## 20. File-Level Implementation Trace
 
@@ -541,7 +540,7 @@ as planned evidence, not removed from the record.
 - [x] Confirm `docs/PRD_airllm_pipeline.md` and `docs/REPORT.md` agree on AirLLM status.
 - [x] Confirm `docs/PRD_benchmarking.md` and `docs/REPORT.md` agree on result counts.
 - [x] Confirm `docs/PRD_quantization.md` and `docs/REPORT.md` agree on bitsandbytes claims.
-- [ ] Confirm `docs/TODO.md` does not mark human review as completed prematurely.
+- [x] Confirm `docs/TODO.md` does not mark human review as completed prematurely.
 - [x] Confirm `README.md` and `docs/REPORT.md` both explain the successful final run.
 - [x] Confirm all generated figures are referenced from at least one doc.
 - [x] Confirm all CLI commands are shown with `uv run`.
