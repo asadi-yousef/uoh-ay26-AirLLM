@@ -76,6 +76,25 @@ maintenance. In the configured request volumes there is no API/local break-even 
 cheaper for the small measured prompt volumes; local inference remains useful for privacy,
 offline execution, learning, and control.
 
+## Screenshot Evidence
+
+Evaluator-facing screenshots are stored under `docs/screenshots/` and embedded in the README.
+The captured evidence includes the GitHub README overview, benchmark figures, hardware JSON,
+processed comparison table, local AirLLM shard-cache folder, and passing Ruff/pytest output.
+
+- README overview: `screenshots/01-github-readme-top/`
+- README figures: `screenshots/02-readme-figures/`
+- Hardware JSON: `screenshots/03-hardware-json/1.png`
+- Comparison table: `screenshots/04-comparison-table/1.png`
+- AirLLM shard-cache proof: `screenshots/05-airllm-shards-folder/1.png`
+- Ruff and pytest: `screenshots/06-ruff-pytest-pass/`
+
+![Comparison table evidence](screenshots/04-comparison-table/1.png)
+
+![AirLLM shard-cache evidence](screenshots/05-airllm-shards-folder/1.png)
+
+![Quality checks evidence](screenshots/06-ruff-pytest-pass/4.png)
+
 ## Negative Results and Limitations
 
 Current failed runs: 0. Token counts are approximate, RAM sampling can

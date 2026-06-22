@@ -105,8 +105,10 @@ as planned evidence, not removed from the record.
 - [x] Expand docs after implementation so they represent what was actually planned and done.
 - [ ] Do a final human read-through of every Markdown document.
 - [ ] Confirm links and image paths render correctly on GitHub.
-- [ ] Capture final screenshots under `docs/screenshots/` and embed them in README before
+- [x] Capture final screenshots under `docs/screenshots/` and embed them in README before
       submission.
+- [x] Capture optional AirLLM shard-directory proof as
+      `docs/screenshots/05-airllm-shards-folder/1.png` without committing the shard files.
 
 ## 4. Configuration System
 

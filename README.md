@@ -463,18 +463,42 @@ Ignored heavy/private artifacts:
 ## Screenshots
 
 The committed plots above are the primary visual evidence. The assignment also asks for
-screenshots in the README, so capture the following final review screenshots before submission
-and save them under `docs/screenshots/`:
+screenshots in the README. Because several views do not fit into one readable capture, each
+evidence group is stored under `docs/screenshots/<topic>/` with numbered PNG files.
 
-| Screenshot | Save as |
-| --- | --- |
-| GitHub README top section showing title, summary, and hardware/model context | `docs/screenshots/01-github-readme-top.png` |
-| GitHub README figures section showing the benchmark plots | `docs/screenshots/02-readme-figures.png` |
-| Local or GitHub view of `results/processed/comparison_table.csv` | `docs/screenshots/03-comparison-table.png` |
-| Terminal output showing `uv run ruff check .` and `uv run pytest` passing | `docs/screenshots/04-ruff-pytest-pass.png` |
-| Optional local raw `hardware.json` view showing CPU/RAM/GPU/VRAM evidence | `docs/screenshots/05-hardware-json.png` |
+README overview:
 
-After capturing them, embed the PNGs in this section with normal Markdown image links.
+![README top 1](docs/screenshots/01-github-readme-top/1.png)
+![README top 2](docs/screenshots/01-github-readme-top/2.png)
+![README top 3](docs/screenshots/01-github-readme-top/3.png)
+![README top 4](docs/screenshots/01-github-readme-top/4.png)
+
+README figures:
+
+![README figures 1](docs/screenshots/02-readme-figures/1.png)
+![README figures 2](docs/screenshots/02-readme-figures/2.png)
+![README figures 3](docs/screenshots/02-readme-figures/3.png)
+![README figures 4](docs/screenshots/02-readme-figures/4.png)
+![README figures 5](docs/screenshots/02-readme-figures/5.png)
+
+Hardware evidence:
+
+![Hardware JSON](docs/screenshots/03-hardware-json/1.png)
+
+Comparison table:
+
+![Comparison table](docs/screenshots/04-comparison-table/1.png)
+
+AirLLM shard-cache proof:
+
+![AirLLM shards folder](docs/screenshots/05-airllm-shards-folder/1.png)
+
+Quality checks:
+
+![Ruff and pytest 1](docs/screenshots/06-ruff-pytest-pass/1.png)
+![Ruff and pytest 2](docs/screenshots/06-ruff-pytest-pass/2.png)
+![Ruff and pytest 3](docs/screenshots/06-ruff-pytest-pass/3.png)
+![Ruff and pytest 4](docs/screenshots/06-ruff-pytest-pass/4.png)
 
 ## Final Engineering Conclusion
 
